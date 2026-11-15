@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { requireFounder } from '@/lib/auth';
 import { formatDate } from '@/lib/utils';
-import { Card, CardHeader, Table, TH, TD, Badge, Select, Input, Button } from '@/components/ui';
+import { Card, CardHeader, Table, TH, TD, Badge, Select, Button } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
 import { InviteStaffForm } from '@/components/forms';
 import { inviteStaff, updateStaffMember } from '@/actions/staff';
@@ -20,7 +20,7 @@ export default async function StaffPage() {
 
   return (
     <>
-      <PageHeader title="Staff management" description="Founder-only administration: roles, activation and audit history." />
+      <PageHeader title="Staff management" description="Founder-only administration. Invited accounts start inactive and must be activated here." />
       <InviteStaffForm action={inviteStaff} />
 
       <Card className="mb-4">
@@ -33,7 +33,7 @@ export default async function StaffPage() {
                 <TD className="font-medium">{s.full_name || '—'}{s.id === me.id ? <span className="ml-2 text-xs text-gold">(you)</span> : null}</TD>
                 <TD className="text-xs text-muted">{s.email}</TD>
                 <TD><Badge tone={s.role === 'founder' ? 'gold' : 'neutral'}>{s.role}</Badge></TD>
-                <TD><Badge tone={s.is_active ? 'green' : 'red'}>{s.is_active ? 'Active' : 'Deactivated'}</Badge></TD>
+                <TD><Badge tone={s.is_active ? 'green' : 'red'}>{s.is_active ? 'Active' : 'Inactive'}</Badge></TD>
                 <TD className="text-xs">{formatDate(s.created_at)}</TD>
                 <TD>
                   {s.id === me.id ? <span className="text-xs text-muted">Protected</span> : (
@@ -42,7 +42,6 @@ export default async function StaffPage() {
                       <Select name="role" defaultValue={s.role} className="!py-1 text-xs">
                         <option value="staff">staff</option>
                         <option value="admin">admin</option>
-                        <option value="founder">founder</option>
                       </Select>
                       <input type="hidden" name="is_active" value={String(!s.is_active)} />
                       <SubmitButton variant="ghost" className="!px-2 !py-1 text-xs">

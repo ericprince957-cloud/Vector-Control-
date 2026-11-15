@@ -32,7 +32,8 @@ export default async function SettingsPage() {
             <div className="flex justify-between border-b border-line/50 pb-2"><span className="text-muted">Currency</span><span>NGN (₦)</span></div>
             <div className="flex justify-between border-b border-line/50 pb-2"><span className="text-muted">Records in CRM</span><span>{count ?? 0}</span></div>
             <div className="flex justify-between border-b border-line/50 pb-2"><span className="text-muted">Data storage</span><span>Supabase PostgreSQL (RLS enforced)</span></div>
-            <div className="flex justify-between"><span className="text-muted">Version</span><span>0.1.0</span></div>
+            <div className="flex justify-between border-b border-line/50 pb-2"><span className="text-muted">Supabase project</span><span className="text-xs">qbmvpmtcelztuzxyifcp</span></div>
+            <div className="flex justify-between"><span className="text-muted">Version</span><span>0.2.0</span></div>
           </div>
         </Card>
       </div>
