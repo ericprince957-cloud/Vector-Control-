@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { requireProfile } from '@/lib/auth';
 import { formatDate } from '@/lib/utils';
-import { Card, Table, TH, TD, EmptyState, Badge, Input, Select, Button } from '@/components/ui';
+import { Card, Table, TH, TD, EmptyState, Badge, Select, Button } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
 import { OutreachForm } from '@/components/forms';
 import { saveOutreach } from '@/actions/outreach';
@@ -14,10 +14,10 @@ export default async function OutreachPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const supabase = await createClient();
 
-  let query = supabase.from('outreach_activities').select('*, prospect:prospects(company_name), staff:profiles!outreach_activities_staff_id_fkey(full_name)').order('occurred_at', { ascending: false }).limit(200);
+  let query = supabase.from('outreach_activities').select('*, prospect:prospects(company_name), creator:profiles!outreach_activities_created_by_fkey(full_name)').order('contacted_at', { ascending: false }).limit(200);
   if (sp.channel) query = query.eq('channel', sp.channel);
   if (sp.outcome) query = query.eq('outcome', sp.outcome);
-  if (sp.staff) query = query.eq('staff_id', sp.staff);
+  if (sp.staff) query = query.eq('created_by', sp.staff);
 
   const [{ data: records }, { data: prospects }, { data: staffList }] = await Promise.all([
     query,
@@ -33,7 +33,7 @@ export default async function OutreachPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title="Outreach" description={`${list.length} records · ${noResponse} without response · ${followUp} need follow-up`} />
-      <OutreachForm action={saveOutreach} prospects={prospects ?? []} staff={staff} />
+      <OutreachForm action={saveOutreach} prospects={prospects ?? []} />
 
       <Card className="mb-4 p-4">
         <form className="grid gap-3 sm:grid-cols-4">
@@ -56,16 +56,16 @@ export default async function OutreachPage({ searchParams }: { searchParams: Pro
       <Card>
         {!list.length ? <EmptyState title="No outreach records" hint="Record your first outreach above." /> : (
           <Table>
-            <thead><tr><TH>Date</TH><TH>Prospect</TH><TH>Channel</TH><TH>Outcome</TH><TH>Staff</TH><TH>Follow-up</TH></tr></thead>
+            <thead><tr><TH>Date</TH><TH>Prospect</TH><TH>Channel</TH><TH>Outcome</TH><TH>Recorded by</TH><TH>Follow-up</TH></tr></thead>
             <tbody>
               {list.map((r) => (
                 <tr key={r.id} className="hover:bg-surface-2/60">
-                  <TD className="text-xs">{formatDate(r.occurred_at)}</TD>
+                  <TD className="text-xs">{formatDate(r.contacted_at)}</TD>
                   <TD className="font-medium">{r.prospect?.company_name ?? '—'}</TD>
                   <TD className="capitalize">{r.channel}</TD>
                   <TD><Badge tone={r.outcome === 'interested' ? 'gold' : r.outcome === 'not_interested' ? 'red' : 'neutral'}>{label(r.outcome)}</Badge></TD>
-                  <TD className="text-xs text-muted">{r.staff?.full_name ?? '—'}</TD>
-                  <TD className="text-xs">{formatDate(r.next_follow_up_date)}</TD>
+                  <TD className="text-xs text-muted">{r.creator?.full_name ?? '—'}</TD>
+                  <TD className="text-xs">{formatDate(r.next_follow_up_at)}</TD>
                 </tr>
               ))}
             </tbody>

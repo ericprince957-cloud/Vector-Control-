@@ -2,12 +2,11 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { requireProfile } from '@/lib/auth';
 import { formatNGN, formatDate } from '@/lib/utils';
-import { Card, Table, TH, TD, EmptyState, Badge, Input, Select, Button } from '@/components/ui';
+import { Card, Table, TH, TD, EmptyState, Badge, Input, Select, Button, Textarea } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
 import { ProspectForm } from '@/components/forms';
 import { saveProspect, importProspectsCSV } from '@/actions/prospects';
 import { PROSPECT_STATUSES, label } from '@/lib/constants';
-import { Textarea } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +27,7 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
   if (sp.industry) query = query.eq('industry', sp.industry);
   if (sp.staff) query = query.eq('assigned_to', sp.staff);
 
-  const [{ data: prospects }, { data: staffList }, { data: industries }] = await Promise.all([
+  const [{ data: prospects, error }, { data: staffList }, { data: industries }] = await Promise.all([
     query.limit(200),
     supabase.from('profiles').select('id, full_name, email').eq('is_active', true),
     supabase.from('prospects').select('industry').not('industry', 'eq', '')
@@ -41,6 +40,8 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
     <>
       <PageHeader title="Prospects" description="Your CRM pipeline of businesses." />
       <ProspectForm action={saveProspect} staff={staff} />
+
+      {error ? <p className="mb-4 rounded-md border border-red-900 bg-red-950/30 px-3 py-2 text-xs text-red-400">Could not load prospects: {error.message}</p> : null}
 
       <Card className="mb-4 p-4">
         <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -70,16 +71,16 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
       <Card>
         {!(prospects ?? []).length ? <EmptyState title="No prospects found" hint="Add your first prospect or adjust filters." /> : (
           <Table>
-            <thead><tr><TH>Company</TH><TH>Contact</TH><TH>Status</TH><TH>Budget</TH><TH>Assigned</TH><TH>Follow-up</TH></tr></thead>
+            <thead><tr><TH>Company</TH><TH>Contact</TH><TH>Status</TH><TH>Est. value</TH><TH>Assigned</TH><TH>Follow-up</TH></tr></thead>
             <tbody>
               {(prospects ?? []).map((p) => (
                 <tr key={p.id} className="hover:bg-surface-2/60">
                   <TD><Link href={`/prospects/${p.id}`} className="font-medium hover:text-gold">{p.company_name}</Link><p className="text-xs text-muted">{p.industry}</p></TD>
                   <TD><p>{p.contact_name || '—'}</p><p className="text-xs text-muted">{p.email || p.phone || ''}</p></TD>
                   <TD><Badge tone={toneMap[p.status]}>{label(p.status)}</Badge></TD>
-                  <TD className="tabular-nums">{formatNGN(p.estimated_budget)}</TD>
+                  <TD className="tabular-nums">{formatNGN(p.estimated_value)}</TD>
                   <TD className="text-xs text-muted">{p.assigned_profile?.full_name ?? 'Unassigned'}</TD>
-                  <TD className="text-xs">{formatDate(p.next_follow_up_date)}</TD>
+                  <TD className="text-xs">{formatDate(p.next_follow_up_at)}</TD>
                 </tr>
               ))}
             </tbody>
@@ -90,7 +91,7 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card className="p-5">
           <h3 className="mb-2 text-sm font-semibold">Import prospects from CSV</h3>
-          <p className="mb-3 text-xs text-muted">Headers: company name, contact name, industry, phone, whatsapp, email, location, lead source, estimated budget</p>
+          <p className="mb-3 text-xs text-muted">Headers: company name, contact name, industry, phone, email, website, location, source, estimated value</p>
           <form action={importProspectsCSV} className="space-y-3">
             <Textarea name="csv" placeholder={'company name,contact name,industry,phone,email\nAcme Ltd,John Tech,software,080…,john@acme.com'} className="font-mono text-xs" />
             <Button type="submit" variant="ghost">Import CSV</Button>

@@ -5,7 +5,7 @@ import { requireProfile } from '@/lib/auth';
 import { formatNGN, formatDate } from '@/lib/utils';
 import { Card, CardHeader, Table, TH, TD, EmptyState, Badge, Button } from '@/components/ui';
 import { label } from '@/lib/constants';
-import { deleteProspect } from '@/actions/prospects';
+import { archiveProspect } from '@/actions/prospects';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +21,7 @@ export default async function ProspectDetail({ params, searchParams }: { params:
   if (!prospect) notFound();
 
   const [outreachRes, dealsRes, tasksRes] = await Promise.all([
-    supabase.from('outreach_activities').select('*').eq('prospect_id', id).order('occurred_at', { ascending: false }),
+    supabase.from('outreach_activities').select('*').eq('prospect_id', id).order('contacted_at', { ascending: false }),
     supabase.from('deals').select('*').eq('prospect_id', id).order('created_at', { ascending: false }),
     supabase.from('tasks').select('*').eq('prospect_id', id).order('created_at', { ascending: false })
   ]);
@@ -35,10 +35,10 @@ export default async function ProspectDetail({ params, searchParams }: { params:
           <p className="text-sm text-muted">{prospect.contact_name}{prospect.industry ? ` · ${prospect.industry}` : ''}</p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/prospects?status=${prospect.status}`}><Badge tone="gold">{label(prospect.status)}</Badge></Link>
-          <form action={deleteProspect}>
+          <Badge tone="gold">{label(prospect.status)}</Badge>
+          <form action={archiveProspect}>
             <input type="hidden" name="id" value={prospect.id} />
-            <Button variant="danger" type="submit">Delete</Button>
+            <Button variant="danger" type="submit">Archive</Button>
           </form>
         </div>
       </div>
@@ -55,10 +55,10 @@ export default async function ProspectDetail({ params, searchParams }: { params:
         <Card className="p-5">
           <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 text-sm">
             {[
-              ['Email', prospect.email || '—'], ['Phone', prospect.phone || '—'], ['WhatsApp', prospect.whatsapp || '—'],
-              ['Website', prospect.website || '—'], ['Location', prospect.location || '—'], ['Lead source', prospect.lead_source || '—'],
-              ['Estimated budget', formatNGN(prospect.estimated_budget)], ['Assigned to', prospect.assigned_profile?.full_name ?? 'Unassigned'],
-              ['Created', formatDate(prospect.created_at)], ['Last contact', formatDate(prospect.last_contact_at)], ['Next follow-up', formatDate(prospect.next_follow_up_date)]
+              ['Email', prospect.email || '—'], ['Phone', prospect.phone || '—'], ['Website', prospect.website_url || '—'],
+              ['Location', prospect.location || '—'], ['Source', prospect.source || '—'], ['Estimated value', formatNGN(prospect.estimated_value)],
+              ['Assigned to', prospect.assigned_profile?.full_name ?? 'Unassigned'],
+              ['Created', formatDate(prospect.created_at)], ['Next follow-up', formatDate(prospect.next_follow_up_at)]
             ].map(([k, v]) => (
               <div key={k as string}><dt className="text-xs text-muted">{k}</dt><dd className="mt-0.5">{v}</dd></div>
             ))}
@@ -75,11 +75,11 @@ export default async function ProspectDetail({ params, searchParams }: { params:
               <tbody>
                 {(outreachRes.data ?? []).map((o) => (
                   <tr key={o.id}>
-                    <TD className="text-xs">{formatDate(o.occurred_at)}</TD>
+                    <TD className="text-xs">{formatDate(o.contacted_at)}</TD>
                     <TD className="capitalize">{o.channel}</TD>
                     <TD className="capitalize text-muted">{o.direction}</TD>
                     <TD><Badge>{label(o.outcome)}</Badge></TD>
-                    <TD className="max-w-xs truncate text-xs text-muted">{o.summary}</TD>
+                    <TD className="max-w-xs truncate text-xs text-muted">{o.message_summary}</TD>
                   </tr>
                 ))}
               </tbody>
@@ -93,12 +93,12 @@ export default async function ProspectDetail({ params, searchParams }: { params:
           <CardHeader title="Deals" />
           {!(dealsRes.data ?? []).length ? <EmptyState title="No deals for this prospect" /> : (
             <Table>
-              <thead><tr><TH>Title</TH><TH>Status</TH><TH>Quoted</TH><TH>Created</TH></tr></thead>
+              <thead><tr><TH>Title</TH><TH>Status</TH><TH>Value</TH><TH>Created</TH></tr></thead>
               <tbody>
                 {(dealsRes.data ?? []).map((d) => (
                   <tr key={d.id}>
                     <TD>{d.title}</TD><TD><Badge>{label(d.status)}</Badge></TD>
-                    <TD className="tabular-nums">{formatNGN(d.quoted_amount)}</TD>
+                    <TD className="tabular-nums">{formatNGN(d.deal_value)}</TD>
                     <TD className="text-xs text-muted">{formatDate(d.created_at)}</TD>
                   </tr>
                 ))}
@@ -118,8 +118,8 @@ export default async function ProspectDetail({ params, searchParams }: { params:
                 {(tasksRes.data ?? []).map((t) => (
                   <tr key={t.id}>
                     <TD>{t.title}</TD><TD className="capitalize">{t.priority}</TD>
-                    <TD className="text-xs">{formatDate(t.due_date)}</TD>
-                    <TD><Badge tone={t.is_completed ? 'green' : 'amber'}>{t.is_completed ? 'Done' : 'Open'}</Badge></TD>
+                    <TD className="text-xs">{formatDate(t.due_at)}</TD>
+                    <TD><Badge tone={t.status === 'done' ? 'green' : 'amber'}>{label(t.status)}</Badge></TD>
                   </tr>
                 ))}
               </tbody>
