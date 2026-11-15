@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-background: #090909;
+  --color-surface: #111111;
+  --color-surface-2: #181818;
+  --color-line: #292929;
+  --color-gold: #D4AF37;
+  --color-gold-light: #E5C76B;
+  --color-text: #FFFFFF;
+  --color-muted: #A0A0A0;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: rgba(212, 175, 55, 0.3); }
+
+input, select, textarea { color-scheme: dark; }
