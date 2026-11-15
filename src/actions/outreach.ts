@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { outreachSchema, parseOrError } from '@/lib/validators';
-import { runAction, audit, blankToNull } from './helpers';
+import { runAction, audit, blankToNull, withAuditWarning } from './helpers';
 
 export async function saveOutreach(formData: FormData) {
   return runAction(async (profile) => {
@@ -11,51 +11,37 @@ export async function saveOutreach(formData: FormData) {
     if (error) throw new Error(error);
     const supabase = await createClient();
 
-    const values = {
-      prospect_id: data.prospect_id,
-      channel: data.channel,
-      direction: data.direction,
-      occurred_at: data.occurred_at,
-      summary: data.summary ?? '',
-      response: data.response ?? '',
-      outcome: data.outcome,
-      staff_id: blankToNull(data.staff_id) ?? profile.id,
-      next_follow_up_date: blankToNull(data.next_follow_up_date as string)
-    };
-
     const { data: created, error: dbErr } = await supabase
       .from('outreach_activities')
-      .insert(values)
+      .insert({
+        prospect_id: data.prospect_id,
+        channel: data.channel,
+        direction: data.direction,
+        subject: data.subject ?? '',
+        message_summary: data.message_summary ?? '',
+        outcome: data.outcome,
+        contacted_at: blankToNull(data.contacted_at as string) ?? new Date().toISOString(),
+        next_follow_up_at: blankToNull(data.next_follow_up_at as string),
+        created_by: profile.id
+      })
       .select('id, prospect_id')
       .single();
     if (dbErr) throw dbErr;
 
-    // keep prospect contact status in sync
+    // Keep the prospect's follow-up date in sync; move status forward.
     await supabase
       .from('prospects')
       .update({
-        last_contact_at: data.occurred_at.slice(0, 10),
-        next_follow_up_date: values.next_follow_up_date,
+        next_follow_up_at: blankToNull(data.next_follow_up_at as string),
         status: data.outcome === 'interested' ? 'interested'
           : data.outcome === 'not_interested' ? 'disqualified'
           : 'contacted'
       })
       .eq('id', data.prospect_id);
 
-    await audit('create', 'outreach', created.id, { channel: data.channel, outcome: data.outcome });
     revalidatePath('/outreach');
     revalidatePath('/prospects');
-    return 'Outreach recorded';
-  });
-}
-
-export async function deleteOutreach(formData: FormData) {
-  return runAction(async () => {
-    const supabase = await createClient();
-    const id = String(formData.get('id'));
-    const { error } = await supabase.from('outreach_activities').delete().eq('id', id);
-    if (error) throw error;
-    revalidatePath('/outreach');
-    return 'Outreach record removed';
+    revalidatePath('/overview');
+    return withAuditWarning('Outreach recorded', await audit('create', 'outreach', created.id, { channel: data.channel, outcome: data.outcome }));
   });
 }

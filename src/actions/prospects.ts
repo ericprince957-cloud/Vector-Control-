@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { prospectSchema, parseOrError } from '@/lib/validators';
-import { runAction, audit, blankToNull } from './helpers';
+import { runAction, audit, blankToNull, withAuditWarning } from './helpers';
 
 export async function saveProspect(formData: FormData) {
   return runAction(async (profile) => {
@@ -16,55 +16,55 @@ export async function saveProspect(formData: FormData) {
       contact_name: data.contact_name ?? '',
       industry: data.industry ?? '',
       phone: data.phone ?? '',
-      whatsapp: data.whatsapp ?? '',
       email: data.email ?? '',
-      website: data.website ?? '',
+      website_url: data.website_url ?? '',
       location: data.location ?? '',
-      lead_source: data.lead_source ?? '',
-      assigned_to: blankToNull(data.assigned_to),
-      estimated_budget: data.estimated_budget,
+      source: data.source ?? '',
+      estimated_value: data.estimated_value,
+      currency: data.currency,
       notes: data.notes ?? '',
       status: data.status,
-      last_contact_at: blankToNull(data.last_contact_at as string),
-      next_follow_up_date: blankToNull(data.next_follow_up_date as string)
+      next_follow_up_at: blankToNull(data.next_follow_up_at as string),
+      assigned_to: blankToNull(data.assigned_to)
     };
 
     const id = blankToNull(formData.get('id'));
     if (id) {
       const { error: upErr } = await supabase.from('prospects').update(values).eq('id', id);
       if (upErr) throw upErr;
-      await audit('update', 'prospect', id, { company: data.company_name });
       revalidatePath('/prospects');
       revalidatePath(`/prospects/${id}`);
-      return 'Prospect updated';
+      return withAuditWarning('Prospect updated', await audit('update', 'prospect', id, { company: data.company_name }));
     }
 
     const { data: created, error: inErr } = await supabase
       .from('prospects')
-      .insert({ ...values, assigned_to: values.assigned_to ?? profile.id })
+      .insert({ ...values, created_by: profile.id })
       .select('id')
       .single();
     if (inErr) throw inErr;
-    await audit('create', 'prospect', created.id, { company: data.company_name });
     revalidatePath('/prospects');
-    return 'Prospect added';
+    return withAuditWarning('Prospect added', await audit('create', 'prospect', created.id, { company: data.company_name }));
   });
 }
 
-export async function deleteProspect(formData: FormData) {
+/**
+ * Soft-delete: the live database does not grant DELETE to ordinary users.
+ * Archiving sets the prospect to "disqualified" and preserves all history.
+ */
+export async function archiveProspect(formData: FormData) {
   return runAction(async () => {
     const supabase = await createClient();
     const id = String(formData.get('id'));
-    const { error } = await supabase.from('prospects').delete().eq('id', id);
+    const { error } = await supabase.from('prospects').update({ status: 'disqualified' }).eq('id', id);
     if (error) throw error;
-    await audit('delete', 'prospect', id);
     revalidatePath('/prospects');
-    return 'Prospect deleted';
+    return withAuditWarning('Prospect archived (marked disqualified)', await audit('archive', 'prospect', id));
   });
 }
 
 export async function importProspectsCSV(formData: FormData) {
-  return runAction(async () => {
+  return runAction(async (profile) => {
     const supabase = await createClient();
     const csv = String(formData.get('csv') ?? '').trim();
     if (!csv) throw new Error('Paste CSV content first');
@@ -79,24 +79,26 @@ export async function importProspectsCSV(formData: FormData) {
         contact_name: rec['contact name'] || rec['contact_name'] || '',
         industry: rec['industry'] || '',
         phone: rec['phone'] || '',
-        whatsapp: rec['whatsapp'] || '',
         email: rec['email'] || '',
+        website_url: rec['website'] || rec['website_url'] || '',
         location: rec['location'] || '',
-        lead_source: rec['lead source'] || rec['lead_source'] || 'csv_import',
-        estimated_budget: Number(rec['estimated budget'] || rec['budget'] || 0) || 0,
-        status: 'new' as const
+        source: rec['source'] || rec['lead source'] || 'csv_import',
+        estimated_value: Number(rec['estimated value'] || rec['estimated budget'] || rec['budget'] || 0) || 0,
+        currency: 'NGN',
+        status: 'new' as const,
+        created_by: profile.id
       };
     }).filter((r) => r.company_name);
 
     if (rows.length === 0) throw new Error('No valid rows found');
     const { error } = await supabase.from('prospects').insert(rows);
     if (error) throw error;
-    await audit('import', 'prospect', null, { count: rows.length });
     revalidatePath('/prospects');
-    return `Imported ${rows.length} prospects`;
+    return withAuditWarning(`Imported ${rows.length} prospects`, await audit('import', 'prospect', null, { count: rows.length }));
   });
 }
 
+/** Duplicate detection on email / phone / company name. */
 export async function findDuplicates() {
   const supabase = await createClient();
   const { data } = await supabase.from('prospects').select('id, company_name, email, phone');

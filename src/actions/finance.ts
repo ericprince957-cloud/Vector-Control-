@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { paymentSchema, expenseSchema, parseOrError } from '@/lib/validators';
-import { runAction, audit, blankToNull } from './helpers';
+import { runAction, audit, blankToNull, withAuditWarning } from './helpers';
 
 export async function savePayment(formData: FormData) {
   return runAction(async (profile) => {
@@ -12,40 +12,34 @@ export async function savePayment(formData: FormData) {
     const supabase = await createClient();
     const values = {
       deal_id: blankToNull(data.deal_id),
+      project_id: blankToNull(data.project_id),
       client_name: data.client_name ?? '',
       amount: data.amount,
-      method: data.method,
+      currency: data.currency,
       status: data.status,
-      reference: data.reference ?? '',
-      received_at: data.received_at,
-      recorded_by: profile.id,
-      notes: data.notes ?? ''
+      payment_method: data.payment_method,
+      payment_reference: data.payment_reference ?? '',
+      paid_at: data.paid_at,
+      transaction_type: data.transaction_type,
+      notes: data.notes ?? '',
+      recorded_by: profile.id
     };
     const id = blankToNull(formData.get('id'));
     if (id) {
       const { error: upErr } = await supabase.from('payments').update(values).eq('id', id);
       if (upErr) throw upErr;
-      await audit('update', 'payment', id, { amount: data.amount, status: data.status });
       revalidatePath('/finance');
-      return 'Payment updated';
+      revalidatePath('/overview');
+      return withAuditWarning('Payment updated', await audit('update', 'payment', id, { amount: data.amount, status: data.status, type: data.transaction_type }));
     }
     const { data: created, error: inErr } = await supabase.from('payments').insert(values).select('id').single();
     if (inErr) throw inErr;
-    await audit('create', 'payment', created.id, { amount: data.amount, status: data.status });
     revalidatePath('/finance');
-    return 'Payment recorded';
-  });
-}
-
-export async function deletePayment(formData: FormData) {
-  return runAction(async () => {
-    const supabase = await createClient();
-    const id = String(formData.get('id'));
-    const { error } = await supabase.from('payments').delete().eq('id', id);
-    if (error) throw error;
-    await audit('delete', 'payment', id);
-    revalidatePath('/finance');
-    return 'Payment deleted';
+    revalidatePath('/overview');
+    return withAuditWarning(
+      data.transaction_type === 'refund' ? 'Refund recorded' : 'Payment recorded',
+      await audit('create', 'payment', created.id, { amount: data.amount, status: data.status, type: data.transaction_type })
+    );
   });
 }
 
@@ -58,8 +52,9 @@ export async function saveExpense(formData: FormData) {
       title: data.title,
       category: data.category,
       amount: data.amount,
-      spent_at: data.spent_at,
-      method: data.method,
+      currency: data.currency,
+      expense_date: data.expense_date,
+      vendor: data.vendor ?? '',
       reference: data.reference ?? '',
       notes: data.notes ?? '',
       recorded_by: profile.id
@@ -68,26 +63,14 @@ export async function saveExpense(formData: FormData) {
     if (id) {
       const { error: upErr } = await supabase.from('expenses').update(values).eq('id', id);
       if (upErr) throw upErr;
-      await audit('update', 'expense', id, { amount: data.amount });
       revalidatePath('/finance');
-      return 'Expense updated';
+      revalidatePath('/overview');
+      return withAuditWarning('Expense updated', await audit('update', 'expense', id, { amount: data.amount }));
     }
     const { data: created, error: inErr } = await supabase.from('expenses').insert(values).select('id').single();
     if (inErr) throw inErr;
-    await audit('create', 'expense', created.id, { amount: data.amount });
     revalidatePath('/finance');
-    return 'Expense recorded';
-  });
-}
-
-export async function deleteExpense(formData: FormData) {
-  return runAction(async () => {
-    const supabase = await createClient();
-    const id = String(formData.get('id'));
-    const { error } = await supabase.from('expenses').delete().eq('id', id);
-    if (error) throw error;
-    await audit('delete', 'expense', id);
-    revalidatePath('/finance');
-    return 'Expense deleted';
+    revalidatePath('/overview');
+    return withAuditWarning('Expense recorded', await audit('create', 'expense', created.id, { amount: data.amount }));
   });
 }
