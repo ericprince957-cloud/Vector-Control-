@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { requireProfile } from '@/lib/auth';
 import { formatNGN, formatDate } from '@/lib/utils';
-import { Card, Select, Button, Badge } from '@/components/ui';
+import { Card, Select, Badge } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
 import { DealForm } from '@/components/forms';
 import { saveDeal, updateDealStatus, convertDealToProject } from '@/actions/deals';
@@ -24,11 +24,11 @@ export default async function DealsPage() {
 
   const staff = (staffList ?? []).map((s) => ({ id: s.id, name: s.full_name || s.email }));
   const list = deals ?? [];
-  const expectedRevenue = list.filter((d) => !['won', 'lost', 'cancelled'].includes(d.status)).reduce((s, d) => s + Number(d.quoted_amount), 0);
+  const expectedRevenue = list.filter((d) => !['won', 'lost', 'cancelled'].includes(d.status)).reduce((s, d) => s + Number(d.deal_value), 0);
 
   return (
     <>
-      <PageHeader title="Deals" description={`Expected revenue (open deals): ${formatNGN(expectedRevenue)} — actual revenue counts only successful payments.`} />
+      <PageHeader title="Deals" description={`Expected revenue (open deals): ${formatNGN(expectedRevenue)} — actual revenue counts only successful payment transactions.`} />
       <DealForm action={saveDeal} prospects={prospects ?? []} staff={staff} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -45,17 +45,15 @@ export default async function DealsPage() {
                   <div key={d.id} className="rounded-md border border-line bg-surface-2 p-3">
                     <p className="text-sm font-medium">{d.title}</p>
                     <p className="text-xs text-muted">{d.prospect?.company_name ?? '—'}</p>
-                    <p className="mt-1 text-sm text-gold tabular-nums">{formatNGN(d.negotiated_amount ?? d.quoted_amount)}</p>
-                    <p className="text-[11px] text-muted">Close: {formatDate(d.expected_close_date)}</p>
-                    <div className="mt-2 flex gap-2">
-                      <form action={updateDealStatus} className="flex-1">
-                        <input type="hidden" name="id" value={d.id} />
-                        <Select name="status" defaultValue={d.status} className="!py-1 text-xs">
-                          {DEAL_STATUSES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
-                        </Select>
-                        <SubmitButton variant="ghost" className="mt-1 w-full !px-2 !py-1 text-xs">Update</SubmitButton>
-                      </form>
-                    </div>
+                    <p className="mt-1 text-sm text-gold tabular-nums">{formatNGN(d.deal_value)}</p>
+                    <p className="text-[11px] text-muted">Close: {formatDate(d.expected_close_date)}{d.won_at ? ` · won ${formatDate(d.won_at)}` : ''}</p>
+                    <form action={updateDealStatus} className="mt-2">
+                      <input type="hidden" name="id" value={d.id} />
+                      <Select name="status" defaultValue={d.status} className="!py-1 text-xs">
+                        {DEAL_STATUSES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
+                      </Select>
+                      <SubmitButton variant="ghost" className="mt-1 w-full !px-2 !py-1 text-xs">Update status</SubmitButton>
+                    </form>
                     {d.status === 'won' ? (
                       <form action={convertDealToProject}>
                         <input type="hidden" name="id" value={d.id} />

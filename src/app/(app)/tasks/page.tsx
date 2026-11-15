@@ -4,8 +4,8 @@ import { formatDate } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, EmptyState } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
 import { TaskForm } from '@/components/forms';
-import { saveTask, toggleTask, deleteTask } from '@/actions/tasks';
-import { label } from '@/lib/constants';
+import { saveTask, updateTaskStatus } from '@/actions/tasks';
+import { TASK_STATUSES, label } from '@/lib/constants';
 import { SubmitButton } from '@/components/submit-button';
 
 export const dynamic = 'force-dynamic';
@@ -15,41 +15,40 @@ const priorityTone: Record<string, 'neutral' | 'gold' | 'red' | 'amber'> = {
 };
 
 export default async function TasksPage() {
-  const profile = await requireProfile();
+  await requireProfile();
   const supabase = await createClient();
 
-  const [{ data: tasks }, { data: staffList }, { data: prospects }] = await Promise.all([
-    supabase.from('tasks').select('*, assignee:profiles!tasks_assigned_to_fkey(full_name)').order('is_completed').order('due_date', { ascending: true }),
+  const [{ data: tasks }, { data: staffList }, { data: prospects }, { data: projects }] = await Promise.all([
+    supabase.from('tasks').select('*, assignee:profiles!tasks_assigned_to_fkey(full_name)').order('created_at', { ascending: false }),
     supabase.from('profiles').select('id, full_name, email').eq('is_active', true),
-    supabase.from('prospects').select('id, company_name').order('company_name')
+    supabase.from('prospects').select('id, company_name').order('company_name'),
+    supabase.from('projects').select('id, project_name').order('created_at', { ascending: false })
   ]);
 
   const staff = (staffList ?? []).map((s) => ({ id: s.id, name: s.full_name || s.email }));
   const list = tasks ?? [];
-  const today = new Date().toISOString().slice(0, 10);
-  const open = list.filter((t) => !t.is_completed);
-  const overdue = open.filter((t) => t.due_date && t.due_date < today);
-  const todays = open.filter((t) => t.due_date === today);
+  const open = list.filter((t) => t.status === 'todo' || t.status === 'in_progress');
+  const nowIso = new Date().toISOString();
+  const overdue = open.filter((t) => t.due_at && t.due_at < nowIso);
+  const todays = open.filter((t) => t.due_at && t.due_at.slice(0, 10) === nowIso.slice(0, 10));
 
   const TaskRow = ({ t }: { t: Record<string, never> }) => (
     <div className="flex items-center justify-between gap-3 border-b border-line/60 px-4 py-3 last:border-0">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium">{t.title}</p>
         <p className="text-xs text-muted">
-          {t.assignee?.full_name ?? 'Unassigned'} · due {formatDate(t.due_date)}
-          {t.due_date && t.due_date < today && !t.is_completed ? <span className="text-red-400"> · overdue</span> : null}
+          {t.assignee?.full_name ?? 'Unassigned'} · due {formatDate(t.due_at)}
+          {t.due_at && t.due_at < nowIso && t.status !== 'done' ? <span className="text-red-400"> · overdue</span> : null}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Badge tone={priorityTone[t.priority]}>{t.priority}</Badge>
-        <form action={toggleTask}>
+        <form action={updateTaskStatus} className="flex items-center gap-1">
           <input type="hidden" name="id" value={t.id} />
-          <input type="hidden" name="done" value={String(!t.is_completed)} />
-          <Button type="submit" variant="ghost" className="!px-2 !py-1 text-xs">{t.is_completed ? 'Reopen' : 'Done'}</Button>
-        </form>
-        <form action={deleteTask}>
-          <input type="hidden" name="id" value={t.id} />
-          <Button type="submit" variant="danger" className="!px-2 !py-1 text-xs">✕</Button>
+          <Select name="status" defaultValue={t.status} className="!py-1 text-xs">
+            {TASK_STATUSES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
+          </Select>
+          <SubmitButton variant="ghost" className="!px-2 !py-1 text-xs">Set</SubmitButton>
         </form>
       </div>
     </div>
@@ -58,7 +57,7 @@ export default async function TasksPage() {
   return (
     <>
       <PageHeader title="Tasks & follow-ups" description={`${open.length} open · ${todays.length} due today · ${overdue.length} overdue`} />
-      <TaskForm action={saveTask} staff={staff} prospects={prospects ?? []} />
+      <TaskForm action={saveTask} staff={staff} prospects={prospects ?? []} projects={projects ?? []} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
@@ -77,9 +76,9 @@ export default async function TasksPage() {
       </div>
 
       <Card className="mt-4">
-        <CardHeader title="Completed" subtitle="Recently finished" />
-        {list.filter((t) => t.is_completed).slice(0, 10).map((t) => <TaskRow key={t.id} t={t} />)}
-        {list.filter((t) => t.is_completed).length === 0 ? <EmptyState title="Nothing completed yet" /> : null}
+        <CardHeader title="Completed & cancelled" subtitle="Recently finished" />
+        {list.filter((t) => t.status === 'done' || t.status === 'cancelled').slice(0, 10).map((t) => <TaskRow key={t.id} t={t} />)}
+        {list.filter((t) => t.status === 'done' || t.status === 'cancelled').length === 0 ? <EmptyState title="Nothing completed yet" /> : null}
       </Card>
     </>
   );

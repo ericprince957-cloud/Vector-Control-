@@ -15,14 +15,14 @@ export async function GET(request: Request) {
 
   if (type === 'prospects') {
     const { data } = await supabase.from('prospects').select('*').order('created_at');
-    rows = (data ?? []).map(({ id, assigned_to, ...rest }) => rest);
+    rows = data ?? [];
     filename = 'prospects.csv';
   } else if (type === 'payments') {
-    const { data } = await supabase.from('payments').select('*').order('received_at');
+    const { data } = await supabase.from('payments').select('*').order('paid_at');
     rows = data ?? [];
     filename = 'payments.csv';
   } else if (type === 'expenses') {
-    const { data } = await supabase.from('expenses').select('*').order('spent_at');
+    const { data } = await supabase.from('expenses').select('*').order('expense_date');
     rows = data ?? [];
     filename = 'expenses.csv';
   } else if (type === 'deals') {
@@ -31,15 +31,17 @@ export async function GET(request: Request) {
     filename = 'deals.csv';
   } else if (type === 'report-monthly') {
     const [{ data: payments }, { data: expenses }] = await Promise.all([
-      supabase.from('payments').select('amount, status, received_at'),
-      supabase.from('expenses').select('amount, spent_at')
+      supabase.from('payments').select('amount, status, transaction_type, paid_at'),
+      supabase.from('expenses').select('amount, expense_date')
     ]);
     const months = new Set<string>();
-    (payments ?? []).forEach((p) => months.add(String(p.received_at).slice(0, 7)));
-    (expenses ?? []).forEach((e) => months.add(String(e.spent_at).slice(0, 7)));
+    (payments ?? []).forEach((p) => months.add(String(p.paid_at).slice(0, 7)));
+    (expenses ?? []).forEach((e) => months.add(String(e.expense_date).slice(0, 7)));
     rows = [...months].sort().map((m) => {
-      const revenue = (payments ?? []).filter((p) => p.status === 'successful' && String(p.received_at).slice(0, 7) === m).reduce((s, p) => s + Number(p.amount), 0);
-      const exp = (expenses ?? []).filter((e) => String(e.spent_at).slice(0, 7) === m).reduce((s, e) => s + Number(e.amount), 0);
+      const revenue = (payments ?? [])
+        .filter((p) => p.status === 'successful' && String(p.paid_at).slice(0, 7) === m)
+        .reduce((s, p) => s + (p.transaction_type === 'refund' ? -Number(p.amount) : Number(p.amount)), 0);
+      const exp = (expenses ?? []).filter((e) => String(e.expense_date).slice(0, 7) === m).reduce((s, e) => s + Number(e.amount), 0);
       return { month: m, revenue, expenses: exp, net: revenue - exp };
     });
     filename = 'monthly-report.csv';
