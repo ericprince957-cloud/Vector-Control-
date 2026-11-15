@@ -8,7 +8,7 @@ export async function middleware(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
@@ -29,12 +29,18 @@ export async function middleware(request: NextRequest) {
 
   const isPublic = PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
 
+  // Unauthenticated users may only see public paths.
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
+  // Authenticated users are bounced off /login to the app.
+  // NOTE: inactive-user handling is NOT done here — the middleware cannot see
+  // profile rows reliably. Inactive authenticated users are sent to
+  // /access-denied by requireProfile() in the app layout, which avoids the
+  // previous redirect loop (middleware → /login → middleware).
   if (user && request.nextUrl.pathname === '/login') {
     const url = request.nextUrl.clone();
     url.pathname = '/overview';

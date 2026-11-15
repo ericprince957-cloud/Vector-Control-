@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const optionalText = z.string().trim().max(2000).optional().or(z.literal(''));
 const nullableDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().or(z.literal(''));
+const nullableDateTime = z.string().min(1).optional().nullable().or(z.literal(''));
 const money = z.coerce.number().min(0).max(1_000_000_000_000);
 
 export const prospectSchema = z.object({
@@ -9,66 +10,64 @@ export const prospectSchema = z.object({
   contact_name: optionalText,
   industry: optionalText,
   phone: optionalText,
-  whatsapp: optionalText,
   email: z.string().trim().email('Invalid email').optional().or(z.literal('')),
-  website: optionalText,
+  website_url: optionalText,
   location: optionalText,
-  lead_source: optionalText,
-  assigned_to: z.string().uuid().optional().nullable().or(z.literal('')),
-  estimated_budget: money.default(0),
+  source: optionalText,
+  estimated_value: money.default(0),
+  currency: z.string().length(3).default('NGN'),
   notes: optionalText,
   status: z.enum(['new','contacted','responded','interested','qualified','converted','disqualified','on_hold']).default('new'),
-  last_contact_at: nullableDate,
-  next_follow_up_date: nullableDate
+  next_follow_up_at: nullableDate,
+  assigned_to: z.string().uuid().optional().nullable().or(z.literal(''))
 });
 
 export const outreachSchema = z.object({
   prospect_id: z.string().uuid('Select a prospect'),
   channel: z.enum(['whatsapp','telegram','email','linkedin','phone','in_person','other']),
   direction: z.enum(['outbound','inbound']).default('outbound'),
-  occurred_at: z.string().min(1),
-  summary: optionalText,
-  response: optionalText,
+  subject: optionalText,
+  message_summary: optionalText,
   outcome: z.enum(['no_response','interested','requested_info','meeting_scheduled','proposal_requested','not_interested','follow_up_required','referred']),
-  staff_id: z.string().uuid().optional().nullable().or(z.literal('')),
-  next_follow_up_date: nullableDate
+  contacted_at: nullableDateTime,
+  next_follow_up_at: nullableDate
 });
 
 export const dealSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
   prospect_id: z.string().uuid('Select a prospect'),
   description: optionalText,
-  service: optionalText,
-  quoted_amount: money.default(0),
-  negotiated_amount: money.optional().nullable(),
+  deal_value: money.default(0),
+  currency: z.string().length(3).default('NGN'),
   expected_close_date: nullableDate,
   assigned_to: z.string().uuid().optional().nullable().or(z.literal('')),
-  status: z.enum(['draft','proposal_sent','negotiation','won','lost','cancelled']).default('draft'),
-  proposal_notes: optionalText,
-  contract_notes: optionalText
+  status: z.enum(['draft','proposal_sent','negotiation','won','lost','cancelled']).default('draft')
 });
 
 export const projectSchema = z.object({
-  name: z.string().trim().min(1, 'Project name is required').max(200),
+  project_name: z.string().trim().min(1, 'Project name is required').max(200),
   client_name: optionalText,
   deal_id: z.string().uuid().optional().nullable().or(z.literal('')),
   description: optionalText,
-  contract_amount: money.default(0),
+  contract_value: money.default(0),
+  currency: z.string().length(3).default('NGN'),
   start_date: nullableDate,
-  deadline: nullableDate,
+  due_date: nullableDate,
   assigned_to: z.string().uuid().optional().nullable().or(z.literal('')),
-  status: z.enum(['not_started','in_progress','under_review','completed','on_hold','cancelled']).default('not_started'),
-  progress_notes: optionalText
+  status: z.enum(['not_started','in_progress','under_review','completed','on_hold','cancelled']).default('not_started')
 });
 
 export const paymentSchema = z.object({
   deal_id: z.string().uuid().optional().nullable().or(z.literal('')),
+  project_id: z.string().uuid().optional().nullable().or(z.literal('')),
   client_name: optionalText,
   amount: z.coerce.number().positive('Amount must be greater than zero'),
-  method: z.enum(['bank_transfer','cash','card','pos','other']),
+  currency: z.string().length(3).default('NGN'),
   status: z.enum(['pending','successful','failed','refunded']).default('pending'),
-  reference: optionalText,
-  received_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  payment_method: z.enum(['bank_transfer','cash','card','pos','other']),
+  payment_reference: optionalText,
+  paid_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  transaction_type: z.enum(['payment','refund']).default('payment'),
   notes: optionalText
 });
 
@@ -76,29 +75,41 @@ export const expenseSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
   category: z.string().trim().min(1).max(100).default('general'),
   amount: z.coerce.number().positive('Amount must be greater than zero'),
-  spent_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  method: z.enum(['bank_transfer','cash','card','pos','other']),
+  currency: z.string().length(3).default('NGN'),
+  expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  vendor: optionalText,
   reference: optionalText,
   notes: optionalText
 });
 
 export const rejectionSchema = z.object({
-  prospect_id: z.string().uuid('Select a prospect'),
+  prospect_id: z.string().uuid('Select a prospect').optional().nullable().or(z.literal('')),
   deal_id: z.string().uuid().optional().nullable().or(z.literal('')),
-  reason: z.enum(['too_expensive','budget_unavailable','chose_competitor','no_response','not_interested','existing_developer','postponed','trust_concerns','timing','other']),
-  competitor: optionalText,
+  company_name: z.string().trim().min(1, 'Company name is required when no prospect is selected').max(200).optional().or(z.literal('')),
+  contact_name: optionalText,
+  category: z.enum(['too_expensive','budget_unavailable','chose_competitor','no_response','not_interested','existing_developer','postponed','trust_concerns','timing','other']),
+  reason: optionalText,
+  potential_value: money.default(0),
+  currency: z.string().length(3).default('NGN'),
   rejected_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  follow_up_possible: z.enum(['true','false']).default('true'),
+  follow_up_at: nullableDate,
   notes: optionalText
+}).refine((d) => d.prospect_id || d.company_name, {
+  message: 'Select an existing prospect or enter a company name',
+  path: ['company_name']
 });
 
 export const taskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
   description: optionalText,
-  assigned_to: z.string().uuid().optional().nullable().or(z.literal('')),
-  due_date: nullableDate,
+  status: z.enum(['todo','in_progress','done','cancelled']).default('todo'),
   priority: z.enum(['low','medium','high','urgent']).default('medium'),
+  due_at: nullableDateTime,
+  assigned_to: z.string().uuid().optional().nullable().or(z.literal('')),
   prospect_id: z.string().uuid().optional().nullable().or(z.literal('')),
-  deal_id: z.string().uuid().optional().nullable().or(z.literal(''))
+  deal_id: z.string().uuid().optional().nullable().or(z.literal('')),
+  project_id: z.string().uuid().optional().nullable().or(z.literal(''))
 });
 
 export type ActionState = { ok: boolean; message: string };
