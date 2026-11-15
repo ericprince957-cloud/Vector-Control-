@@ -1,4 +1,3 @@
-import { Suspense } from 'react';
 import Link from 'next/link';
 import { login, requestPasswordReset } from '@/actions/auth';
 import { SubmitButton } from '@/components/submit-button';
@@ -31,27 +30,18 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <SubmitButton className="w-full">Sign in</SubmitButton>
         </form>
 
-        <Suspense>
-          <ResetRequest />
-        </Suspense>
+        <form action={requestPasswordReset} className="mt-6 border-t border-line pt-4">
+          <p className="mb-2 text-xs text-muted">Forgot your password? Enter your email to receive a reset link.</p>
+          <div className="flex gap-2">
+            <Input name="email" type="email" required placeholder="Email address" />
+            <SubmitButton variant="ghost">Send</SubmitButton>
+          </div>
+          <p className="mt-4 text-[11px] text-muted/60">
+            Private system. Access is restricted to authorized Vector Codes personnel.
+          </p>
+          <Link href="/login" className="mt-2 block text-[11px] text-gold/70">Back to sign in</Link>
+        </form>
       </Card>
     </main>
-  );
-}
-
-function ResetRequest() {
-  return (
-    <form action={requestPasswordReset} className="mt-6 border-t border-line pt-4">
-      <p className="mb-2 text-xs text-muted">Forgot your password? Enter your email to receive a reset link.</p>
-      <div className="flex gap-2">
-        <Input name="email" type="email" required placeholder="Email address" />
-        <SubmitButton variant="ghost">Send</SubmitButton>
-      </div>
-      <input type="hidden" name="origin" value="" />
-      <p className="mt-4 text-[11px] text-muted/60">
-        Private system. Access is restricted to authorized Vector Codes personnel.
-      </p>
-      <Link href="/login" className="mt-2 block text-[11px] text-gold/70">Back to sign in</Link>
-    </form>
   );
 }

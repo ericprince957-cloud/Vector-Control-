@@ -1,5 +1,6 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
@@ -11,10 +12,11 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) redirect('/login?error=' + encodeURIComponent('Invalid email or password'));
 
+  const { data: { user } } = await supabase.auth.getUser();
   const { data } = await supabase
     .from('profiles')
     .select('is_active')
-    .eq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
+    .eq('id', user?.id ?? '')
     .single();
 
   if (data && !data.is_active) {
@@ -34,8 +36,10 @@ export async function logout() {
 export async function requestPasswordReset(formData: FormData) {
   const supabase = await createClient();
   const email = String(formData.get('email') ?? '');
-  const origin = String(formData.get('origin') ?? '');
-  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/reset-password` });
+  const headerList = await headers();
+  const host = headerList.get('x-forwarded-host') ?? headerList.get('host') ?? 'localhost:3000';
+  const proto = headerList.get('x-forwarded-proto') ?? 'http';
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${proto}://${host}/reset-password` });
   redirect('/login?message=' + encodeURIComponent('If the email exists, a reset link has been sent'));
 }
 
