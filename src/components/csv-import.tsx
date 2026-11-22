@@ -2,7 +2,6 @@
 
 import { Upload } from 'lucide-react';
 import { FormDialog } from './form-dialog';
-import { Field } from './ui';
 import type { ActionState } from '@/lib/validators';
 
 export function CsvImportDialog({ action }: { action: (fd: FormData) => Promise<ActionState> }) {
@@ -17,14 +16,14 @@ export function CsvImportDialog({ action }: { action: (fd: FormData) => Promise<
       submitLabel="Import prospects"
     >
       <div className="space-y-3">
-        <Field label="Choose file *">
+        <div className="space-y-2"><p className="text-sm font-medium">Choose file *</p>
           <label htmlFor="prospect-import-file" className="flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong px-4 py-5 text-center text-sm hover:border-gold/60">
             <Upload size={20} aria-hidden />
             <span className="font-medium">Choose CSV or Excel file</span>
             <span className="text-xs text-muted">.csv or .xlsx · Maximum 10 MB</span>
           </label>
           <input id="prospect-import-file" name="file" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required className="sr-only" />
-        </Field>
+        </div>
         <div className="rounded-lg bg-surface-2 p-3 text-xs text-muted">
           <p className="mb-1 font-medium text-foreground">Recognised columns</p>
           Company Name, Contact Name, Phone, Email, WhatsApp Link, Email Link, Telegram Link, Prefilled Message, Industry, Website, Location, Source, Estimated Value.
