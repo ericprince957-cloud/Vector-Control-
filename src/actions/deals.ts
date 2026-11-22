@@ -64,6 +64,7 @@ export async function updateDealStatus(formData: FormData) {
 
 export async function convertDealToProject(formData: FormData) {
   return runAction(async (profile) => {
+    if (profile.role !== 'founder') throw new Error('Only the founder can convert a won deal into a client project');
     const supabase = await createClient();
     const dealId = String(formData.get('id'));
     const { data: deal } = await supabase
