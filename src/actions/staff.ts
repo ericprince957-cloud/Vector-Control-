@@ -20,7 +20,13 @@ export async function inviteStaff(formData: FormData) {
     if (!['admin', 'staff'].includes(role)) throw new Error('Invalid role');
 
     const admin = await createAdminClient();
-    const { data, error } = await admin.auth.admin.inviteUserByEmail(email);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) throw new Error('Server not configured: NEXT_PUBLIC_APP_URL is missing');
+    const redirectTo = new URL('/auth/callback?next=%2Fset-password', appUrl).toString();
+    const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo,
+      data: { full_name: fullName || email.split('@')[0] }
+    });
     if (error) throw new Error(error.message.includes('already') ? 'A user with this email already exists' : 'Invitation failed — check that SUPABASE_SERVICE_ROLE_KEY is configured on the server');
 
     if (data.user) {
