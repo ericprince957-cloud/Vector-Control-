@@ -4,6 +4,7 @@ import { requireProfile } from '@/lib/auth';
 import { Card, CardHeader, Badge, Button, DetailRow, LinkButton } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
 import { logout } from '@/actions/auth';
+import { InstallApp } from '@/components/pwa';
 
 export const metadata: Metadata = { title: 'Settings', description: 'Account and workspace information.' };
 export const dynamic = 'force-dynamic';
@@ -38,7 +39,12 @@ export default async function SettingsPage() {
           </dl>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card>
+          <CardHeader title="Install app" subtitle="Use Vector Control like a native app" />
+          <div className="p-4"><InstallApp /></div>
+        </Card>
+
+        <Card>
           <CardHeader title="Security & access" />
           <div className="space-y-2 px-4 py-4 text-sm text-muted">
             <p>Access is enforced by the database: staff only see records permitted to their role, whatever the screen shows.</p>
