@@ -63,6 +63,13 @@ export default async function ProspectDetail({ params, searchParams }: { params:
   const projectOptions = (projectsRes.data ?? []).map((p) => ({ id: p.id, name: p.project_name }));
   const thisProspect = [{ id: prospect.id, name: prospect.company_name }];
   const archived = prospect.status === 'disqualified';
+  const contactMessage = prospect.prefilled_message || `Hello ${prospect.contact_name || 'there'}, I’m reaching out regarding ${prospect.company_name}. I’m with Vector Codes and would love to discuss how we could help your business.`;
+  const waRaw = prospect.whatsapp_link || prospect.phone || '';
+  const whatsappHref = waRaw ? (waRaw.startsWith('http') ? (waRaw.includes('?') ? waRaw : `${waRaw}?${new URLSearchParams({ text: contactMessage })}`) : `https://wa.me/${waRaw.replace(/\\D/g, '').replace(/^0/, '234')}?${new URLSearchParams({ text: contactMessage })}`) : '';
+  const emailRaw = prospect.email_link || prospect.email || '';
+  const emailHref = emailRaw ? (emailRaw.startsWith('mailto:') ? (emailRaw.includes('?') ? emailRaw : `${emailRaw}?subject=${encodeURIComponent('A quick introduction from Vector Codes')}&body=${encodeURIComponent(contactMessage)}`) : `mailto:${emailRaw}?subject=${encodeURIComponent('A quick introduction from Vector Codes')}&body=${encodeURIComponent(contactMessage)}`) : '';
+  const tgRaw = prospect.telegram_link || '';
+  const telegramHref = tgRaw ? (tgRaw.startsWith('http') ? (tgRaw.includes('?') ? tgRaw : `${tgRaw}?text=${encodeURIComponent(contactMessage)}`) : `https://t.me/${tgRaw.replace(/^@/, '')}?text=${encodeURIComponent(contactMessage)}`) : '';
 
   // Chronological history across every record linked to this prospect.
   const history = [
@@ -124,6 +131,13 @@ export default async function ProspectDetail({ params, searchParams }: { params:
             <dl className="px-4 py-1">
               <DetailRow label="Contact person">{prospect.contact_name || '—'}</DetailRow>
               <DetailRow label="Email">{prospect.email ? <a className="hover:text-gold" href={`mailto:${prospect.email}`}>{prospect.email}</a> : '—'}</DetailRow>
+              <DetailRow label="Contact actions"><div className="flex flex-wrap gap-3">
+                {whatsappHref ? <a className="font-medium text-emerald-600 hover:underline" href={whatsappHref} target="_blank" rel="noreferrer">WhatsApp</a> : null}
+                {emailHref ? <a className="font-medium text-sky-600 hover:underline" href={emailHref}>Email</a> : null}
+                {telegramHref ? <a className="font-medium text-blue-500 hover:underline" href={telegramHref} target="_blank" rel="noreferrer">Telegram</a> : null}
+                {!whatsappHref && !emailHref && !telegramHref ? '—' : null}
+              </div></DetailRow>
+              <DetailRow label="Prefilled message"><span className="whitespace-pre-wrap">{prospect.prefilled_message || 'Default Vector Codes introduction'}</span></DetailRow>
               <DetailRow label="Phone">{prospect.phone || '—'}</DetailRow>
               <DetailRow label="Website">{prospect.website_url || '—'}</DetailRow>
               <DetailRow label="Location">{prospect.location || '—'}</DetailRow>
