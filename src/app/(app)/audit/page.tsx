@@ -25,9 +25,9 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   let query = supabase
     .from('audit_logs')
-    .select('id, action, entity, entity_id, details, created_at, actor_id, actor:profiles!audit_logs_actor_id_fkey(full_name, email)', { count: 'exact' })
+    .select('id, action, entity_type, entity_id, details, created_at, actor_id, actor:profiles!audit_logs_actor_id_fkey(full_name, email)', { count: 'exact' })
     .order('created_at', { ascending: false });
-  if (sp.entity) query = query.eq('entity', sp.entity);
+  if (sp.entity) query = query.eq('entity_type', sp.entity);
   if (sp.action) query = query.eq('action', sp.action);
   if (sp.actor) query = query.eq('actor_id', sp.actor);
   if (dFrom) query = query.gte('created_at', dFrom);
@@ -35,10 +35,10 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   const [{ data, count, error }, { data: meta }, { data: people }] = await Promise.all([
     query.range(from, to),
-    supabase.from('audit_logs').select('entity, action').order('created_at', { ascending: false }).limit(1000),
+    supabase.from('audit_logs').select('entity_type, action').order('created_at', { ascending: false }).limit(1000),
     supabase.from('profiles').select('id, full_name, email')
   ]);
-  const entities = [...new Set((meta ?? []).map((m) => m.entity))].sort();
+  const entities = [...new Set((meta ?? []).map((m) => m.entity_type))].sort();
   const actions = [...new Set((meta ?? []).map((m) => m.action))].sort();
   const rows = data ?? [];
   const filtered = Boolean(sp.entity || sp.action || sp.actor || dFrom || dTo);
@@ -72,7 +72,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                       <TD className="whitespace-nowrap text-xs">{formatDate(l.created_at)}</TD>
                       <TD className="text-xs">{actor?.full_name || actor?.email || 'System'}</TD>
                       <TD><Badge>{l.action.replace(/_/g, ' ')}</Badge></TD>
-                      <TD className="text-xs capitalize text-muted">{l.entity.replace(/_/g, ' ')}</TD>
+                      <TD className="text-xs capitalize text-muted">{l.entity_type.replace(/_/g, ' ')}</TD>
                       <TD className="max-w-sm break-words font-mono text-[11px] text-muted">{JSON.stringify(l.details)}</TD>
                     </tr>
                   );

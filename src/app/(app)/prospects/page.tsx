@@ -9,7 +9,10 @@ import { FilterBar } from '@/components/filter-bar';
 import { Pagination } from '@/components/pagination';
 import { ProspectDialog } from '@/components/forms';
 import { CsvImportDialog } from '@/components/csv-import';
-import { saveProspect, importProspectsCSV } from '@/actions/prospects';
+import { saveProspect, importProspectsCSV, updateProspectStatus } from '@/actions/prospects';
+import { ContactPills } from '@/components/contact-pills';
+import { StatusSelect } from '@/components/status-select';
+import { contactLinks } from '@/lib/contact';
 import { PROSPECT_STATUSES, label } from '@/lib/constants';
 import { PAGE_SIZE, pageParam, rangeFor, safeSearch, one, prospectTone } from '@/lib/ui-helpers';
 
@@ -32,15 +35,19 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
     .order(sp.sort === 'company' ? 'company_name' : sp.sort === 'value' ? 'estimated_value' : 'created_at', { ascending: sp.sort === 'company' });
 
   if (q) query = query.or(`company_name.ilike.%${q}%,contact_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);
-  if (sp.status && (PROSPECT_STATUSES as readonly string[]).includes(sp.status)) query = query.eq('status', sp.status);
+  if (sp.status === 'not_messaged') query = query.eq('status', 'new');
+  else if (sp.status === 'messaged') query = query.neq('status', 'new');
+  else if (sp.status && (PROSPECT_STATUSES as readonly string[]).includes(sp.status)) query = query.eq('status', sp.status);
   if (sp.source) query = query.eq('source', sp.source);
   if (sp.staff === 'unassigned') query = query.is('assigned_to', null);
   else if (sp.staff) query = query.eq('assigned_to', sp.staff);
 
-  const [{ data: prospects, count, error }, { data: staffList }, { data: sources }] = await Promise.all([
+  const [{ data: prospects, count, error }, { data: staffList }, { data: sources }, { count: notMessaged }, { count: totalCount }] = await Promise.all([
     query.range(from, to),
     supabase.from('profiles').select('id, full_name, email').eq('is_active', true),
-    supabase.from('prospects').select('source').not('source', 'is', null).neq('source', '')
+    supabase.from('prospects').select('source').not('source', 'is', null).neq('source', ''),
+    supabase.from('prospects').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+    supabase.from('prospects').select('id', { count: 'exact', head: true })
   ]);
 
   const staff = (staffList ?? []).map((s) => ({ id: s.id, name: s.full_name || s.email }));
@@ -56,12 +63,29 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
         <ProspectDialog action={saveProspect} staff={staff} canAssign={!isStaff} />
       </PageHeader>
 
+      <nav aria-label="Messaging progress" className="mb-3 flex flex-wrap gap-2">
+        {[
+          { key: '', label: 'All', n: totalCount ?? 0 },
+          { key: 'not_messaged', label: 'Not messaged yet', n: notMessaged ?? 0 },
+          { key: 'messaged', label: 'Messaged', n: (totalCount ?? 0) - (notMessaged ?? 0) }
+        ].map((c) => {
+          const active = (sp.status ?? '') === c.key;
+          const href = c.key ? `/prospects?status=${c.key}` : '/prospects';
+          return (
+            <Link key={c.key} href={href} aria-current={active ? 'page' : undefined}
+              className={`inline-flex min-h-8 items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${active ? 'border-gold bg-gold/10 text-gold' : 'border-line-strong text-muted hover:text-text'}`}>
+              {c.label} <span className="tabular-nums opacity-80">{c.n}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
       <FilterBar
         basePath="/prospects"
         values={{ q: sp.q, status: sp.status, source: sp.source, staff: sp.staff, sort: sp.sort }}
         filters={[
           { kind: 'search', name: 'q', placeholder: 'Search company, contact, email or phone…' },
-          { kind: 'select', name: 'status', label: 'Status', options: PROSPECT_STATUSES.map((s) => ({ value: s, label: label(s) })) },
+          { kind: 'select', name: 'status', label: 'Status', options: [{ value: 'not_messaged', label: 'Not messaged yet' }, { value: 'messaged', label: 'Messaged (any stage)' }, ...PROSPECT_STATUSES.map((s) => ({ value: s, label: label(s) }))] },
           { kind: 'select', name: 'source', label: 'Source', options: sourceList.map((s) => ({ value: s, label: s })) },
           ...(isStaff ? [] : [{ kind: 'select' as const, name: 'staff', label: 'Assigned to', options: [{ value: 'unassigned', label: 'Unassigned' }, ...staff.map((s) => ({ value: s.id, label: s.name }))] }]),
           { kind: 'select', name: 'sort', label: 'Sort', options: [{ value: 'company', label: 'Company A–Z' }, { value: 'value', label: 'Highest value' }] }
@@ -78,19 +102,13 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
           />
         ) : (
           <>
-            <Table minWidth={820}>
+            <Table minWidth={980}>
               <thead>
-                <tr><TH>Company</TH><TH>Contact</TH><TH>Contact actions</TH><TH>Status</TH><TH>Source</TH><TH>Est. value</TH><TH>Assigned</TH><TH>Follow-up</TH></tr>
+                <tr><TH>Company</TH><TH>Contact</TH><TH>Message</TH><TH>Status</TH><TH>Source</TH><TH>Est. value</TH><TH>Assigned</TH><TH>Follow-up</TH></tr>
               </thead>
               <tbody>
                 {rows.map((p) => {
-                  const message = p.prefilled_message || `Hello ${p.contact_name || 'there'}, I’m reaching out regarding ${p.company_name}. I’m with Vector Codes and would love to discuss how we could help your business.`;
-                  const waRaw: string = p.whatsapp_link || p.phone || '';
-                  const wa = waRaw ? (waRaw.startsWith('http') ? (waRaw.includes('?') ? waRaw : `${waRaw}?${new URLSearchParams({ text: message })}`) : `https://wa.me/${waRaw.split('').filter((ch: string) => ch >= '0' && ch <= '9').join('').replace(/^0/, '234')}?${new URLSearchParams({ text: message })}`) : '';
-                  const emailRaw = p.email_link || p.email || '';
-                  const mail = emailRaw ? (emailRaw.startsWith('mailto:') ? (emailRaw.includes('?') ? emailRaw : `${emailRaw}?subject=${encodeURIComponent('A quick introduction from Vector Codes')}&body=${encodeURIComponent(message)}`) : `mailto:${emailRaw}?subject=${encodeURIComponent('A quick introduction from Vector Codes')}&body=${encodeURIComponent(message)}`) : '';
-                  const telegramRaw = p.telegram_link || '';
-                  const telegram = telegramRaw ? (telegramRaw.startsWith('http') ? (telegramRaw.includes('?') ? telegramRaw : `${telegramRaw}?text=${encodeURIComponent(message)}`) : `https://t.me/${telegramRaw.replace(/^@/, '')}?text=${encodeURIComponent(message)}`) : '';
+                  const links = contactLinks(p);
                   const overdue = p.next_follow_up_at && p.next_follow_up_at < new Date().toISOString() && !['converted', 'disqualified'].includes(p.status);
                   return (
                     <tr key={p.id} className="hover:bg-surface-2/60">
@@ -99,12 +117,8 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
                         {p.industry ? <p className="text-xs text-muted">{p.industry}</p> : null}
                       </TD>
                       <TD><p>{p.contact_name || '—'}</p><p className="text-xs text-muted">{p.email || p.phone || ''}</p></TD>
-                      <TD><div className="flex flex-wrap gap-2 text-xs">
-                        {wa ? <a href={wa} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline">WhatsApp</a> : null}
-                        {mail ? <a href={mail.includes('?') ? mail : `${mail}?subject=${encodeURIComponent('A quick introduction from Vector Codes')}&body=${encodeURIComponent(message)}`} className="text-sky-600 hover:underline">Email</a> : null}
-                        {telegram ? <a href={telegram.includes('?') ? telegram : `${telegram}?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">Telegram</a> : null}
-                      </div></TD>
-                      <TD><Badge tone={prospectTone[p.status]}>{label(p.status)}</Badge></TD>
+                      <TD><ContactPills prospectId={p.id} status={p.status} links={links} action={updateProspectStatus} /></TD>
+                      <TD><StatusSelect prospectId={p.id} status={p.status} action={updateProspectStatus} /></TD>
                       <TD className="text-xs text-muted">{p.source || '—'}</TD>
                       <TD className="tabular-nums">{formatNGN(p.estimated_value)}</TD>
                       <TD className="text-xs text-muted">{one(p.assigned as { full_name: string } | { full_name: string }[] | null)?.full_name ?? 'Unassigned'}</TD>

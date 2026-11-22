@@ -265,3 +265,36 @@ export async function deleteProspect(formData: FormData) {
     return withAuditWarning('Prospect deleted', await audit('delete', 'prospect', id));
   });
 }
+
+const PROSPECT_STATUS_VALUES = ['new', 'contacted', 'responded', 'interested', 'qualified', 'converted', 'disqualified', 'on_hold'];
+
+/**
+ * Quick status change (used by the status dropdown and by the contact buttons).
+ * With only_if_new=1 it only moves a prospect from "new" to "contacted", so
+ * clicking a chat button never overwrites a more advanced status.
+ */
+export async function updateProspectStatus(formData: FormData) {
+  return runAction(async () => {
+    const id = String(formData.get('id') ?? '').trim();
+    const status = String(formData.get('status') ?? '').trim();
+    const onlyIfNew = formData.get('only_if_new') === '1';
+    if (!id) throw new Error('Prospect is missing');
+    if (!PROSPECT_STATUS_VALUES.includes(status)) throw new Error('Invalid status');
+
+    const supabase = await createClient();
+    let query = supabase.from('prospects').update({ status }).eq('id', id);
+    if (onlyIfNew) query = query.eq('status', 'new');
+    const { data, error } = await query.select('id');
+    if (error) throw error;
+    if (!data?.length) {
+      if (onlyIfNew) return 'Status unchanged';
+      throw new Error('Could not update this prospect');
+    }
+
+    revalidatePath('/prospects');
+    revalidatePath(`/prospects/${id}`);
+    revalidatePath('/overview');
+    const warning = await audit('status_change', 'prospect', id, { status });
+    return withAuditWarning(onlyIfNew ? 'Marked as contacted' : `Status set to ${status.replace(/_/g, ' ')}`, warning);
+  });
+}
