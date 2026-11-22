@@ -32,6 +32,7 @@ export async function saveProspect(formData: FormData) {
     const id = blankToNull(formData.get('id'));
     const amountPaid = Number(formData.get('amount_paid') ?? 0);
     if (amountPaid > Number(data.estimated_value)) throw new Error('Amount paid cannot exceed the agreed/estimated value.');
+    if (amountPaid > 0 && profile.role === 'staff') throw new Error('Only finance-enabled roles can record payments.');
 
     if (id) {
       const { error: upErr } = await supabase.from('prospects').update(values).eq('id', id);
