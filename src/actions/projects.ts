@@ -63,3 +63,18 @@ export async function saveProject(formData: FormData) {
     return withAuditWarning('Project created', await audit('create', 'project', created.id, { name: data.project_name }));
   });
 }
+
+export async function deleteProject(formData: FormData) {
+  return runAction(async (profile) => {
+    if (profile.role !== 'founder') throw new Error('Only the founder can permanently delete projects.');
+    const id = String(formData.get('id') ?? '');
+    if (!id) throw new Error('Project ID is required');
+    const supabase = await createClient();
+    const { error } = await supabase.from('projects').delete().eq('id', id);
+    if (error) throw error;
+    revalidatePath('/projects');
+    revalidatePath('/deals');
+    revalidatePath('/finance');
+    return withAuditWarning('Project deleted', await audit('delete', 'project', id));
+  });
+}
