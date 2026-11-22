@@ -34,7 +34,7 @@ Copy `.env.example` to `.env.local` for local development. Never commit `.env.lo
 - Region: `eu-central-2`
 - Currency: NGN only
 
-The connected live database is the current source of truth. It has the role-scoped access hardening migration `role_scoped_access_and_finance_view_hardening` and the commission ledger migrations `commission_ledger_for_collected_payments` and `restrict_commission_updates_to_approval_fields`.
+The connected live database is the current source of truth. It has the role-scoped access hardening migration `role_scoped_access_and_finance_view_hardening` the commission ledger migrations `commission_ledger_for_collected_payments` and `restrict_commission_updates_to_approval_fields`, and profile self-escalation protection `prevent_self_role_escalation_on_profiles`.
 
 **Migration drift warning:** The older numbered SQL files `0001_schema.sql` through `0004_security_alignment.sql` do not exactly describe the current live schema/history. Do not blindly replay them against the existing project. Reconcile them into a clean baseline before using them to provision a fresh production database.
 
@@ -45,6 +45,7 @@ The connected live database is the current source of truth. It has the role-scop
 - The founder must activate invited staff and assign their role from the founder-only Staff page.
 - The first founder account must be provisioned explicitly in Supabase Auth and then promoted/activated in the matching `public.profiles` row.
 - Only the founder can invite, activate, deactivate or change staff roles.
+- Authenticated users can update only their own display name/avatar; role, active status and email are not self-editable.
 - Privileged staff administration uses the server-only service-role key after the caller's founder identity is verified.
 - Inactive users are redirected to a clear access-restricted page and can sign out.
 
