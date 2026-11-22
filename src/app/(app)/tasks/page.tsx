@@ -26,6 +26,8 @@ export default async function TasksPage() {
   ]);
 
   const staff = (staffList ?? []).map((s) => ({ id: s.id, name: s.full_name || s.email }));
+  const prospectOptions = (prospects ?? []).map((p) => ({ id: p.id, name: p.company_name }));
+  const projectOptions = (projects ?? []).map((p) => ({ id: p.id, name: p.project_name }));
   const list = tasks ?? [];
   const open = list.filter((t) => t.status === 'todo' || t.status === 'in_progress');
   const nowIso = new Date().toISOString();
@@ -57,7 +59,7 @@ export default async function TasksPage() {
   return (
     <>
       <PageHeader title="Tasks & follow-ups" description={`${open.length} open · ${todays.length} due today · ${overdue.length} overdue`} />
-      <TaskForm action={saveTask} staff={staff} prospects={prospects ?? []} projects={projects ?? []} />
+      <TaskForm action={saveTask} staff={staff} prospects={prospectOptions} projects={projectOptions} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
