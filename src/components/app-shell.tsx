@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
@@ -65,7 +66,7 @@ function visible(item: NavItem, role: Role) {
 function Brand({ collapsed }: { collapsed?: boolean }) {
   return (
     <Link href="/overview" className="flex items-center gap-3" aria-label="Vector Control home">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[5px] bg-gold text-[15px] font-bold text-black">V</div>
+      <Image src="/logo.png" alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-full" priority />
       {!collapsed ? (
         <div className="min-w-0 leading-tight">
           <p className="truncate text-sm font-semibold tracking-wide">Vector Control</p>

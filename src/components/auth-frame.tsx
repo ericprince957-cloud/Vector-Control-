@@ -1,10 +1,11 @@
+import Image from 'next/image';
 import { Card } from './ui';
 
 export function AuthFrame({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
       <div className="mb-8 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-[5px] bg-gold text-lg font-bold text-black">V</div>
+        <Image src="/logo.png" alt="" width={44} height={44} className="h-11 w-11 rounded-full" priority />
         <div className="leading-tight">
           <p className="text-base font-semibold tracking-wide">Vector Control</p>
           <p className="text-[10px] uppercase tracking-[0.2em] text-muted">Vector Codes</p>
