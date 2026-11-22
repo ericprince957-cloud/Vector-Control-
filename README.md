@@ -68,8 +68,11 @@ The connected live database is the current source of truth. It has the role-scop
 8. Sales commission is 10% of eligible successful client payments actually received, not deal value or unpaid invoices.
 9. Successful refunds create negative commission adjustments.
 10. Commission entries are generated from the sales representative assigned to the deal when the payment is recorded.
-11. Only the founder can approve, void or mark commission entries as paid.
-12. Successful payment records are immutable; record refunds as separate refund transactions.
+11. Only the founder can approve or void commission entries and record net payouts per representative.
+12. Approved negative refund adjustments carry forward and reduce the next net payout.
+13. Successful payment records are immutable; record refunds as separate refund transactions.
+
+Commission payout batches are recorded manually after an actual bank transfer or other agreed payout. The system stores the payout reference; it does not initiate bank transfers.
 
 ## Soft-delete and audit policy
 
