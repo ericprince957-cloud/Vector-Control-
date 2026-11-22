@@ -5,6 +5,53 @@ import { createClient } from '@/lib/supabase/server';
 import { prospectSchema, parseOrError } from '@/lib/validators';
 import { runAction, audit, blankToNull, withAuditWarning } from './helpers';
 
+
+type DealProspect = { id: string; company_name: string; estimated_value?: number | string | null; currency?: string | null; assigned_to?: string | null };
+
+/**
+ * When a prospect is Qualified and has a price, make sure it shows in the Deals
+ * pipeline as a draft deal. Never creates duplicates (any open deal counts) and
+ * respects the backend pricing rules: only the founder sets deal value; sales
+ * staff create a draft at ₦0 that the founder prices; admins cannot create deals.
+ * Returns a short note to append to the success message.
+ */
+async function ensureDealForQualified(
+  profile: { id: string; role: string },
+  prospect: DealProspect
+): Promise<string> {
+  const value = Number(prospect.estimated_value ?? 0);
+  if (!(value > 0)) return ' Add an agreed price on the prospect to create a deal.';
+  if (profile.role === 'admin') return ' No deal was created: only the founder or the assigned sales rep can create deals.';
+
+  const supabase = await createClient();
+  const { data: existing, error: findErr } = await supabase
+    .from('deals')
+    .select('id')
+    .eq('prospect_id', prospect.id)
+    .not('status', 'in', '(lost,cancelled)')
+    .limit(1);
+  if (findErr) return ' The deal could not be checked: ' + findErr.message;
+  if (existing?.length) return ' A deal already exists for this prospect.';
+
+  const founder = profile.role === 'founder';
+  const { error } = await supabase.from('deals').insert({
+    title: prospect.company_name,
+    prospect_id: prospect.id,
+    description: founder ? 'Created automatically when the prospect was qualified.' : `Created automatically when the prospect was qualified. Proposed price: ₦${value.toLocaleString('en-NG')} — awaiting founder approval.`,
+    deal_value: founder ? value : 0,
+    currency: prospect.currency || 'NGN',
+    status: 'draft',
+    assigned_to: founder ? prospect.assigned_to : profile.id,
+    created_by: profile.id
+  });
+  if (error) return ' The deal could not be created: ' + error.message;
+
+  revalidatePath('/deals');
+  revalidatePath('/overview');
+  await audit('create', 'deal', null, { prospect_id: prospect.id, source: 'auto_qualified' });
+  return founder ? ' A draft deal was added to the pipeline.' : ' A draft deal was added; the founder will approve the price.';
+}
+
 export async function saveProspect(formData: FormData) {
   return runAction(async (profile) => {
     const { data, error } = parseOrError(prospectSchema, formData);
@@ -52,7 +99,10 @@ export async function saveProspect(formData: FormData) {
       revalidatePath('/prospects');
       revalidatePath(`/prospects/${id}`);
       revalidatePath('/finance');
-      return withAuditWarning('Prospect updated', await audit('update', 'prospect', id, { company: data.company_name }));
+      const dealNote = data.status === 'qualified'
+        ? await ensureDealForQualified(profile, { id, company_name: data.company_name, estimated_value: data.estimated_value, currency: data.currency, assigned_to: assignedTo })
+        : '';
+      return withAuditWarning('Prospect updated.' + dealNote, await audit('update', 'prospect', id, { company: data.company_name }));
     }
 
     const { data: created, error: inErr } = await supabase
@@ -71,7 +121,10 @@ export async function saveProspect(formData: FormData) {
     }
     revalidatePath('/prospects');
     revalidatePath('/finance');
-    return withAuditWarning('Prospect added', await audit('create', 'prospect', created.id, { company: data.company_name }));
+    const dealNote = data.status === 'qualified'
+      ? await ensureDealForQualified(profile, { id: created.id, company_name: data.company_name, estimated_value: data.estimated_value, currency: data.currency, assigned_to: assignedTo })
+      : '';
+    return withAuditWarning('Prospect added.' + dealNote, await audit('create', 'prospect', created.id, { company: data.company_name }));
   });
 }
 
@@ -274,7 +327,7 @@ const PROSPECT_STATUS_VALUES = ['new', 'contacted', 'responded', 'interested', '
  * clicking a chat button never overwrites a more advanced status.
  */
 export async function updateProspectStatus(formData: FormData) {
-  return runAction(async () => {
+  return runAction(async (profile) => {
     const id = String(formData.get('id') ?? '').trim();
     const status = String(formData.get('status') ?? '').trim();
     const onlyIfNew = formData.get('only_if_new') === '1';
@@ -294,7 +347,16 @@ export async function updateProspectStatus(formData: FormData) {
     revalidatePath('/prospects');
     revalidatePath(`/prospects/${id}`);
     revalidatePath('/overview');
+    let dealNote = '';
+    if (status === 'qualified' && !onlyIfNew) {
+      const { data: prospect } = await supabase
+        .from('prospects')
+        .select('id, company_name, estimated_value, currency, assigned_to')
+        .eq('id', id)
+        .maybeSingle();
+      if (prospect) dealNote = await ensureDealForQualified(profile, prospect as DealProspect);
+    }
     const warning = await audit('status_change', 'prospect', id, { status });
-    return withAuditWarning(onlyIfNew ? 'Marked as contacted' : `Status set to ${status.replace(/_/g, ' ')}`, warning);
+    return withAuditWarning((onlyIfNew ? 'Marked as contacted' : `Status set to ${status.replace(/_/g, ' ')}.`) + dealNote, warning);
   });
 }
