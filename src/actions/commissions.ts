@@ -14,7 +14,6 @@ export async function updateCommissionStatus(formData: FormData) {
 
     const transitions: Record<string, string> = {
       approved: 'pending',
-      paid: 'approved',
       void: 'pending'
     };
     const previousStatus = transitions[nextStatus];
@@ -24,11 +23,6 @@ export async function updateCommissionStatus(formData: FormData) {
     if (nextStatus === 'approved') {
       values.approved_by = profile.id;
       values.approved_at = new Date().toISOString();
-    }
-    if (nextStatus === 'paid') {
-      values.paid_by = profile.id;
-      values.paid_at = new Date().toISOString();
-      values.payout_reference = String(formData.get('payout_reference') ?? '').trim();
     }
 
     const supabase = await createClient();
@@ -45,8 +39,50 @@ export async function updateCommissionStatus(formData: FormData) {
 
     revalidatePath('/commissions');
     return withAuditWarning(
-      nextStatus === 'approved' ? 'Commission approved' : nextStatus === 'paid' ? 'Commission marked as paid' : 'Pending commission voided',
+      nextStatus === 'approved' ? 'Commission approved' : 'Pending commission voided',
       await audit('status_change', 'commission_entry', id, { status: nextStatus })
+    );
+  });
+}
+
+export async function payApprovedCommissionBatch(formData: FormData) {
+  return runAction(async (profile) => {
+    if (profile.role !== 'founder') throw new Error('Only the founder can process commission payouts');
+    const staffId = String(formData.get('staff_id') ?? '').trim();
+    const payoutReference = String(formData.get('payout_reference') ?? '').trim();
+    if (!staffId) throw new Error('Select a sales representative');
+    if (!payoutReference) throw new Error('Enter the bank transfer or payout reference');
+
+    const supabase = await createClient();
+    const { data: entries, error: readError } = await supabase
+      .from('commission_entries')
+      .select('id, commission_amount')
+      .eq('staff_id', staffId)
+      .eq('status', 'approved');
+    if (readError) throw readError;
+    const netAmount = (entries ?? []).reduce((sum, entry) => sum + Number(entry.commission_amount), 0);
+    if (!entries?.length || netAmount <= 0) {
+      throw new Error('There is no positive net approved commission to pay. Negative refund adjustments carry forward.');
+    }
+
+    const { data: updated, error } = await supabase
+      .from('commission_entries')
+      .update({
+        status: 'paid',
+        paid_by: profile.id,
+        paid_at: new Date().toISOString(),
+        payout_reference: payoutReference
+      })
+      .eq('staff_id', staffId)
+      .eq('status', 'approved')
+      .select('id');
+    if (error) throw error;
+    if (!updated?.length) throw new Error('No approved commission entries were available for payout');
+
+    revalidatePath('/commissions');
+    return withAuditWarning(
+      `Net commission payout of ₦${netAmount.toLocaleString('en-NG')} recorded for ${updated.length} entries`,
+      await audit('commission_payout', 'commission_entry', null, { staff_id: staffId, amount: netAmount, entries: updated.length, payout_reference: payoutReference })
     );
   });
 }
