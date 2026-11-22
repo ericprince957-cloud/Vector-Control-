@@ -10,6 +10,11 @@ export async function saveDeal(formData: FormData) {
     const { data, error } = parseOrError(dealSchema, formData);
     if (error) throw new Error(error);
     const supabase = await createClient();
+    let assignedTo = profile.role === 'staff' ? profile.id : blankToNull(data.assigned_to);
+    if (!assignedTo) {
+      const { data: prospect } = await supabase.from('prospects').select('assigned_to').eq('id', data.prospect_id).maybeSingle();
+      assignedTo = prospect?.assigned_to ?? null;
+    }
 
     const values = {
       title: data.title,
@@ -18,7 +23,7 @@ export async function saveDeal(formData: FormData) {
       deal_value: data.deal_value,
       currency: data.currency,
       expected_close_date: blankToNull(data.expected_close_date as string),
-      assigned_to: blankToNull(data.assigned_to),
+      assigned_to: assignedTo,
       status: data.status,
       won_at: data.status === 'won' ? new Date().toISOString() : null
     };
