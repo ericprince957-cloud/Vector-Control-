@@ -27,7 +27,11 @@ function NavLinks({ role, onNavigate }: { role: string; onNavigate?: () => void 
   const pathname = usePathname();
   return (
     <nav className="flex flex-1 flex-col gap-1 px-3">
-      {NAV.filter((item) => item.href !== '/staff' || role === 'founder').map((item) => {
+      {NAV.filter((item) => {
+        if (item.href === '/staff') return role === 'founder';
+        if (item.href === '/finance' || item.href === '/reports') return role !== 'staff';
+        return true;
+      }).map((item) => {
         const active = pathname.startsWith(item.href);
         return (
           <Link
