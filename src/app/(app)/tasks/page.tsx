@@ -3,6 +3,7 @@ import { requireProfile } from '@/lib/auth';
 import { formatDate } from '@/lib/utils';
 import { Card, CardHeader, Badge, Button, EmptyState } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
+import { ActionForm } from '@/components/action-form';
 import { TaskForm } from '@/components/forms';
 import { saveTask, updateTaskStatus } from '@/actions/tasks';
 import { TASK_STATUSES, label } from '@/lib/constants';
@@ -45,13 +46,13 @@ export default async function TasksPage() {
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Badge tone={priorityTone[t.priority]}>{t.priority}</Badge>
-        <form action={updateTaskStatus} className="flex items-center gap-1">
+        <ActionForm action={updateTaskStatus} className="flex items-center gap-1">
           <input type="hidden" name="id" value={t.id} />
           <Select name="status" defaultValue={t.status} className="!py-1 text-xs">
             {TASK_STATUSES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
           </Select>
           <SubmitButton variant="ghost" className="!px-2 !py-1 text-xs">Set</SubmitButton>
-        </form>
+        </ActionForm>
       </div>
     </div>
   );
