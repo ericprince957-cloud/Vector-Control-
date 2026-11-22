@@ -32,7 +32,7 @@ export async function audit(action: string, entity: string, entityId?: string | 
     const { error } = await supabase.from('audit_logs').insert({
       actor_id: user?.id ?? null,
       action,
-      entity,
+      entity_type: entity,
       entity_id: entityId ?? null,
       details
     });
