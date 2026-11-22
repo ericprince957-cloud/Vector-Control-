@@ -34,7 +34,7 @@ export default async function FinancePage() {
   const pays = paymentsRes.data ?? [];
   const exps = expensesRes.data ?? [];
   const deals = dealsRes.data ?? [];
-  const dealOptions = deals.map((d) => ({ id: d.id, name: d.title }));
+  const dealOptions = deals.map((d) => ({ id: d.id, name: `${d.title} — ${d.prospect_id?.company_name ?? ''}` }));
   const projectOptions = (projectsRes.data ?? []).map((p) => ({ id: p.id, name: p.project_name }));
 
   // Per-deal outstanding: won deal value − net successful payments (refunds netted), min 0.
@@ -70,7 +70,7 @@ export default async function FinancePage() {
       </div>
 
       <div className="mb-6">
-        <PaymentForm action={savePayment} deals={deals.map((d) => ({ id: d.id, name: `${d.title} — ${d.prospect_id?.company_name ?? ''}` }))} projects={projectsRes.data ?? []} />
+        <PaymentForm action={savePayment} deals={dealOptions} projects={projectOptions} />
         <ExpenseForm action={saveExpense} />
       </div>
 
