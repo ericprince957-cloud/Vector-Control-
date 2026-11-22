@@ -21,6 +21,7 @@ type FinancialOverview = {
 
 export default async function OverviewPage() {
   const profile = await requireProfile();
+  const canViewFinance = profile.role !== 'staff';
   const supabase = await createClient();
 
   const [finRes, prospectsRes, dealsRes, paymentsRes, tasksRes, projectsRes, outreachRes] = await Promise.all([
@@ -89,19 +90,21 @@ export default async function OverviewPage() {
         <StatCard label="Active deals" value={activeDeals.length} />
         <StatCard label="Deals won" value={wonDeals.length} tone="green" />
         <StatCard label="Deals lost" value={lostDeals.length} tone="red" />
-        <StatCard label="Net revenue" value={formatNGN(fin?.total_net_revenue ?? 0)} tone="green" />
-        <StatCard label="Revenue (this month)" value={formatNGN(fin?.current_month_net_revenue ?? 0)} tone="gold" />
-        <StatCard label="Outstanding" value={formatNGN(fin?.outstanding_balance ?? 0)} tone="gold" />
-        <StatCard label="Expenses (month)" value={formatNGN(fin?.current_month_expenses ?? 0)} tone="red" />
-        <StatCard label="Net operating result" value={formatNGN(fin?.net_operating_result ?? 0)} tone={(fin?.net_operating_result ?? 0) >= 0 ? 'green' : 'red'} />
+        {canViewFinance ? <>
+          <StatCard label="Net revenue" value={formatNGN(fin?.total_net_revenue ?? 0)} tone="green" />
+          <StatCard label="Revenue (this month)" value={formatNGN(fin?.current_month_net_revenue ?? 0)} tone="gold" />
+          <StatCard label="Outstanding" value={formatNGN(fin?.outstanding_balance ?? 0)} tone="gold" />
+          <StatCard label="Expenses (month)" value={formatNGN(fin?.current_month_expenses ?? 0)} tone="red" />
+          <StatCard label="Net operating result" value={formatNGN(fin?.net_operating_result ?? 0)} tone={(fin?.net_operating_result ?? 0) >= 0 ? 'green' : 'red'} />
+        </> : null}
         <StatCard label="Conversion rate" value={`${conversionRate}%`} />
       </div>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
-        <Card>
+        {canViewFinance ? <Card>
           <CardHeader title="Revenue vs expenses" subtitle="Last 6 months (refunds netted)" />
           <div className="p-4"><MonthlyBars data={monthly} /></div>
-        </Card>
+        </Card> : null}
         <Card>
           <CardHeader title="Prospect acquisition" subtitle="New prospects per month" />
           <div className="p-4"><TrendLine data={monthly} dataKey="prospects" name="New prospects" /></div>
@@ -140,7 +143,7 @@ export default async function OverviewPage() {
             </div>
           )}
         </Card>
-        <Card>
+        {canViewFinance ? <Card>
           <CardHeader title="Recent payments" />
           {recentPayments.length === 0 ? <EmptyState title="No payments recorded" /> : (
             <div className="p-4">
@@ -154,7 +157,7 @@ export default async function OverviewPage() {
               ))}
             </div>
           )}
-        </Card>
+        </Card> : null}
         <Card>
           <CardHeader title="Needs attention" />
           <div className="p-4 text-sm">
