@@ -6,7 +6,7 @@ import { Card, CardHeader, StatCard, Table, TH, TD, Badge, Select, Button, Empty
 import { PageHeader } from '@/components/page-header';
 import { ActionForm } from '@/components/action-form';
 import { InviteStaffDialog } from '@/components/forms';
-import { inviteStaff, updateStaffMember } from '@/actions/staff';
+import { inviteStaff, updateStaffMember, deleteStaffMember } from '@/actions/staff';
 
 export const metadata: Metadata = { title: 'Staff', description: 'Team accounts and access.' };
 export const dynamic = 'force-dynamic';
@@ -87,6 +87,18 @@ export default async function StaffPage() {
                             <input type="hidden" name="id" value={s.id} />
                             <input type="hidden" name="is_active" value={String(!s.is_active)} />
                             <Button type="submit" variant={s.is_active ? 'danger' : 'primary'} size="sm">{s.is_active ? 'Deactivate' : 'Activate'}</Button>
+                          </ActionForm>
+                          <ActionForm
+                            action={deleteStaffMember}
+                            confirm={{
+                              title: "Permanently delete " + (s.full_name || s.email) + "?",
+                              description: "This removes their login and staff profile permanently. Existing deals, projects, prospects and tasks are retained, but their staff assignments will be cleared. This cannot be undone.",
+                              confirmLabel: "Delete staff",
+                              danger: true
+                            }}
+                          >
+                            <input type="hidden" name="id" value={s.id} />
+                            <Button type="submit" variant="danger" size="sm">Delete</Button>
                           </ActionForm>
                         </div>
                       )}
