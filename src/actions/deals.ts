@@ -8,7 +8,7 @@ import { runAction, audit, blankToNull, withAuditWarning } from './helpers';
 export async function saveDeal(formData: FormData) {
   return runAction(async (profile) => {
     const { data, error } = parseOrError(dealSchema, formData);
-    if (error) throw new Error(error);
+    if (error || !data) throw new Error(error || 'Invalid deal data');
     const supabase = await createClient();
     let assignedTo = profile.role === 'staff' ? profile.id : blankToNull(data.assigned_to);
     if (!assignedTo) {
