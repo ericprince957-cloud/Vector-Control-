@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { ActionForm } from '@/components/action-form';
 import { DealDialog } from '@/components/forms';
 import { DealStageControl } from '@/components/deal-controls';
-import { saveDeal, updateDealStatus, convertDealToProject } from '@/actions/deals';
+import { deleteDeal, saveDeal, updateDealStatus, convertDealToProject } from '@/actions/deals';
 import { label } from '@/lib/constants';
 import { dealTone, one } from '@/lib/ui-helpers';
 
@@ -81,6 +81,7 @@ export default async function DealsPage() {
                       <p className="text-[11px] text-muted">
                         {one(d.assigned as { full_name: string } | { full_name: string }[] | null)?.full_name ?? 'Unassigned'} · close {formatDate(d.expected_close_date)}
                       </p>
+                      {isFounder ? <ActionForm action={deleteDeal} className="mt-2" confirm={{ title: 'Permanently delete this deal?', description: 'Linked project references and payment ledger links will be detached. Financial transactions remain in the ledger. This cannot be undone.', confirmLabel: 'Delete deal' }}><input type="hidden" name="id" value={d.id} /><Button type="submit" variant="danger" size="sm" className="w-full">Delete deal</Button></ActionForm> : null}
                       <div className="mt-3">
                         <DealStageControl action={updateDealStatus} dealId={d.id} status={d.status} isFounder={isFounder} compact />
                       </div>
