@@ -6,7 +6,7 @@ import { runAction, audit, withAuditWarning } from './helpers';
 
 export async function updateCommissionStatus(formData: FormData) {
   return runAction(async (profile) => {
-    if (profile.role !== 'founder') throw new Error('Only the founder can approve or pay commissions');
+    if (profile.role !== 'founder') throw new Error('Only the founder can approve or void commissions');
 
     const id = String(formData.get('id') ?? '').trim();
     const nextStatus = String(formData.get('status') ?? '').trim();
@@ -19,16 +19,10 @@ export async function updateCommissionStatus(formData: FormData) {
     const previousStatus = transitions[nextStatus];
     if (!previousStatus) throw new Error('Invalid commission action');
 
-    const values: Record<string, unknown> = { status: nextStatus };
-    if (nextStatus === 'approved') {
-      values.approved_by = profile.id;
-      values.approved_at = new Date().toISOString();
-    }
-
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('commission_entries')
-      .update(values)
+      .update({ status: nextStatus })
       .eq('id', id)
       .eq('status', previousStatus)
       .select('id')
@@ -67,12 +61,7 @@ export async function payApprovedCommissionBatch(formData: FormData) {
 
     const { data: updated, error } = await supabase
       .from('commission_entries')
-      .update({
-        status: 'paid',
-        paid_by: profile.id,
-        paid_at: new Date().toISOString(),
-        payout_reference: payoutReference
-      })
+      .update({ status: 'paid', payout_reference: payoutReference })
       .eq('staff_id', staffId)
       .eq('status', 'approved')
       .select('id');
