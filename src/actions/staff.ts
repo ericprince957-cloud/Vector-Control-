@@ -91,3 +91,41 @@ export async function assignRecord(formData: FormData) {
     return withAuditWarning('Assignment updated', await audit('assign', table, recordId, { staff_id: staffId }));
   });
 }
+
+/**
+ * Permanently remove a staff account — founder only.
+ * Founder accounts are protected even if a forged request is submitted.
+ */
+export async function deleteStaffMember(formData: FormData) {
+  return runAction(async () => {
+    const founder = await requireFounderForAction();
+    const id = String(formData.get('id') ?? '').trim();
+    if (!id) throw new Error('Staff account not specified');
+    if (id === founder.id) throw new Error('Your founder account is protected and cannot be deleted');
+
+    const admin = await createAdminClient();
+    const { data: member, error: lookupError } = await admin
+      .from('profiles')
+      .select('id, email, role')
+      .eq('id', id)
+      .maybeSingle();
+    if (lookupError) throw new Error('Could not verify staff account: ' + lookupError.message);
+    if (!member) throw new Error('Staff account not found');
+    if (member.role === 'founder') throw new Error('Founder accounts are protected and cannot be deleted');
+
+    // Clear ownership assignments first so existing business records remain intact.
+    for (const table of ['tasks', 'deals', 'projects', 'prospects'] as const) {
+      const { error } = await admin.from(table).update({ assigned_to: null }).eq('assigned_to', id);
+      if (error) throw new Error('Could not safely remove staff assignments: ' + error.message);
+    }
+
+    const { error: deleteError } = await admin.auth.admin.deleteUser(id);
+    if (deleteError) throw new Error('Could not delete staff login: ' + deleteError.message);
+
+    revalidatePath('/staff');
+    return withAuditWarning(
+      `Staff account ${member.email || id} deleted; business records were retained and assignments cleared`,
+      await audit('delete', 'staff', id, { email: member.email, role: member.role, by: founder.id })
+    );
+  });
+}
