@@ -34,7 +34,7 @@ Copy `.env.example` to `.env.local` for local development. Never commit `.env.lo
 - Region: `eu-central-2`
 - Currency: NGN only
 
-The connected live database is the current source of truth. It has the role-scoped access hardening migration `role_scoped_access_and_finance_view_hardening` the commission ledger migrations `commission_ledger_for_collected_payments` and `restrict_commission_updates_to_approval_fields`, and profile self-escalation protection `prevent_self_role_escalation_on_profiles`.
+The connected live database is the current source of truth. It has the role-scoped access hardening migration `role_scoped_access_and_finance_view_hardening` the commission ledger migrations `commission_ledger_for_collected_payments` and `restrict_commission_updates_to_approval_fields`, profile self-escalation protection `prevent_self_role_escalation_on_profiles`, and founder approval guards `founder_approval_for_deal_and_project_terms`.
 
 **Migration drift warning:** The older numbered SQL files `0001_schema.sql` through `0004_security_alignment.sql` do not exactly describe the current live schema/history. Do not blindly replay them against the existing project. Reconcile them into a clean baseline before using them to provision a fresh production database.
 
@@ -53,6 +53,8 @@ The connected live database is the current source of truth. It has the role-scop
 
 - Founder/admin: business-wide CRM and finance access.
 - Staff: only records they created or were assigned; no payments, expenses, financial reports or staff administration.
+- Staff can create draft deals and report negotiation responses, but cannot set final deal stages or change approved pricing.
+- Only the founder can approve proposals, mark deals won/lost, convert deals into projects, create client projects, or change project contract terms.
 - RLS is enabled on every public business table.
 - Financial views use `security_invoker = true` so underlying table policies are enforced.
 - Anonymous access to business tables and financial views is revoked.
