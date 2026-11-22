@@ -15,12 +15,12 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#0a0a0a',
-  colorScheme: 'dark'
+  colorScheme: 'light dark'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark">
       <body>
         {children}
         <RegisterServiceWorker />
