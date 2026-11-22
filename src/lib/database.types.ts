@@ -588,6 +588,10 @@ export type Database = {
           created_by: string | null
           currency: string
           email: string | null
+          whatsapp_link: string | null
+          email_link: string | null
+          telegram_link: string | null
+          prefilled_message: string | null
           estimated_value: number
           id: string
           industry: string | null
@@ -608,6 +612,10 @@ export type Database = {
           created_by?: string | null
           currency?: string
           email?: string | null
+          whatsapp_link?: string | null
+          email_link?: string | null
+          telegram_link?: string | null
+          prefilled_message?: string | null
           estimated_value?: number
           id?: string
           industry?: string | null
