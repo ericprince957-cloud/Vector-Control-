@@ -4,6 +4,7 @@ import { formatNGN, formatDate } from '@/lib/utils';
 import { Card, CardHeader, StatCard, Table, TH, TD, Badge, EmptyState } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
 import { SubmitButton } from '@/components/submit-button';
+import { ActionForm } from '@/components/action-form';
 import { updateCommissionStatus, payApprovedCommissionBatch } from '@/actions/commissions';
 
 export const dynamic = 'force-dynamic';
@@ -83,11 +84,11 @@ export default async function CommissionsPage() {
                     {group.net <= 0 ? <Badge tone="amber">Adjustment carries forward</Badge> : <Badge tone="green">Ready for payout</Badge>}
                   </div>
                   {group.net > 0 ? (
-                    <form action={payApprovedCommissionBatch} className="flex flex-col gap-2 sm:flex-row">
+                    <ActionForm action={payApprovedCommissionBatch} className="flex flex-col gap-2 sm:flex-row">
                       <input type="hidden" name="staff_id" value={group.staffId} />
                       <input name="payout_reference" required placeholder="Bank transfer reference" className="rounded border border-line bg-surface-2 px-3 py-2 text-xs" />
                       <SubmitButton className="text-xs">Record net payout</SubmitButton>
-                    </form>
+                    </ActionForm>
                   ) : null}
                 </div>
               ))}
@@ -132,16 +133,16 @@ export default async function CommissionsPage() {
                     <TD>
                       {entry.status === 'pending' ? (
                         <div className="flex flex-wrap gap-1">
-                          <form action={updateCommissionStatus}>
+                          <ActionForm action={updateCommissionStatus}>
                             <input type="hidden" name="id" value={entry.id} />
                             <input type="hidden" name="status" value="approved" />
                             <SubmitButton className="!px-2 !py-1 text-xs">Approve</SubmitButton>
-                          </form>
+                          </ActionForm>
                           <form action={updateCommissionStatus}>
                             <input type="hidden" name="id" value={entry.id} />
                             <input type="hidden" name="status" value="void" />
                             <SubmitButton variant="ghost" className="!px-2 !py-1 text-xs">Void</SubmitButton>
-                          </form>
+                          </ActionForm>
                         </div>
                       ) : entry.status === 'approved' ? (
                         <span className="text-xs text-muted">Included in net payout</span>
