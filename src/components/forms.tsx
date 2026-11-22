@@ -318,7 +318,7 @@ export function InviteStaffDialog({ action }: { action: Action }) {
   return (
     <FormDialog
       title="Invite staff member"
-      description="Invited accounts are created inactive. Activate them after they accept the invitation."
+      description="They will receive a secure email link to create their own password. Their account stays inactive until you activate it."
       triggerLabel="Invite staff"
       action={action}
       submitLabel="Send invitation"
