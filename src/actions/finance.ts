@@ -7,6 +7,8 @@ import { runAction, audit, blankToNull, withAuditWarning } from './helpers';
 
 export async function savePayment(formData: FormData) {
   return runAction(async (profile) => {
+    if (profile.role === 'staff') throw new Error('Only the founder or an admin can manage financial records');
+
     const { data, error } = parseOrError(paymentSchema, formData);
     if (error || !data) throw new Error(error || 'Invalid form data');
     const supabase = await createClient();
@@ -25,13 +27,26 @@ export async function savePayment(formData: FormData) {
       recorded_by: profile.id
     };
     const id = blankToNull(formData.get('id'));
+
     if (id) {
+      const { data: existing, error: lookupError } = await supabase
+        .from('payments')
+        .select('status')
+        .eq('id', id)
+        .maybeSingle();
+      if (lookupError) throw lookupError;
+      if (!existing) throw new Error('Payment record not found');
+      if (existing.status === 'successful' || existing.status === 'refunded') {
+        throw new Error('Settled payments are locked. Record a separate refund transaction instead of editing this payment.');
+      }
+
       const { error: upErr } = await supabase.from('payments').update(values).eq('id', id);
       if (upErr) throw upErr;
       revalidatePath('/finance');
       revalidatePath('/overview');
       return withAuditWarning('Payment updated', await audit('update', 'payment', id, { amount: data.amount, status: data.status, type: data.transaction_type }));
     }
+
     const { data: created, error: inErr } = await supabase.from('payments').insert(values).select('id').single();
     if (inErr) throw inErr;
     revalidatePath('/finance');
@@ -45,6 +60,8 @@ export async function savePayment(formData: FormData) {
 
 export async function saveExpense(formData: FormData) {
   return runAction(async (profile) => {
+    if (profile.role === 'staff') throw new Error('Only the founder or an admin can manage financial records');
+
     const { data, error } = parseOrError(expenseSchema, formData);
     if (error || !data) throw new Error(error || 'Invalid form data');
     const supabase = await createClient();
