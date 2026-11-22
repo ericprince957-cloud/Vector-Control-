@@ -131,7 +131,7 @@ export default async function ProspectDetail({ params, searchParams }: { params:
               <DetailRow label="Source">{prospect.source || '—'}</DetailRow>
               <DetailRow label="Agreed / estimated value">{formatNGN(prospect.estimated_value)}</DetailRow>
               {!isStaff ? <DetailRow label="Received">{formatNGN(received)}</DetailRow> : null}
-              {!isStaff ? <DetailRow label="Outstanding">{formatNGN(outstanding)}</DetailRow> : null>
+              {!isStaff ? <DetailRow label="Outstanding">{formatNGN(outstanding)}</DetailRow> : null}
               <DetailRow label="Next follow-up">{formatDate(prospect.next_follow_up_at)}</DetailRow>
               <DetailRow label="Added">{formatDate(prospect.created_at)}</DetailRow>
             </dl>
