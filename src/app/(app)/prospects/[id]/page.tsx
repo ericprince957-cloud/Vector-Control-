@@ -36,10 +36,10 @@ export default async function ProspectDetail({ params, searchParams }: { params:
         </div>
         <div className="flex gap-2">
           <Badge tone="gold">{label(prospect.status)}</Badge>
-          <form action={archiveProspect}>
+          <ActionForm action={archiveProspect}>
             <input type="hidden" name="id" value={prospect.id} />
             <Button variant="danger" type="submit">Archive</Button>
-          </form>
+          </ActionForm>
         </div>
       </div>
 
