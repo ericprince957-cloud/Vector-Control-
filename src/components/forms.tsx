@@ -62,7 +62,7 @@ export function ProspectDialog({ action, staff, prospect, canAssign = true }: { 
         <Field label="Website"><Input name="website_url" defaultValue={prospect?.website_url ?? ''} /></Field>
         <Field label="Location"><Input name="location" defaultValue={prospect?.location ?? ''} /></Field>
         <Field label="Agreed / estimated value (₦)"><Input name="estimated_value" type="number" min="0" step="0.01" defaultValue={prospect ? String(prospect.estimated_value) : '0'} /></Field>
-        {!edit ? <Field label="Amount already paid (₦)" hint="Optional. Recorded as a successful payment in the ledger."><Input name="amount_paid" type="number" min="0" step="0.01" defaultValue="0" /></Field> : null}
+        {!edit && canAssign ? <Field label="Amount already paid (₦)" hint="Optional. Recorded as a successful payment in the ledger."><Input name="amount_paid" type="number" min="0" step="0.01" defaultValue="0" /></Field> : null}
         <Field label="Status"><Select name="status" defaultValue={prospect?.status ?? 'new'}>{opts(PROSPECT_STATUSES)}</Select></Field>
         {canAssign ? (
           <Field label="Assigned to"><Select name="assigned_to" defaultValue={prospect?.assigned_to ?? ''}><option value="">Unassigned</option>{people(staff)}</Select></Field>
