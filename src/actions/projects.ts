@@ -10,13 +10,22 @@ export async function saveProject(formData: FormData) {
     const { data, error } = parseOrError(projectSchema, formData);
     if (error || !data) throw new Error(error || 'Invalid form data');
     const supabase = await createClient();
-    let assignedTo = profile.role === 'staff' ? profile.id : blankToNull(data.assigned_to);
+    const id = blankToNull(formData.get('id'));
+
+    if (profile.role === 'staff') {
+      throw new Error('Staff can work on assigned tasks, but project records are managed by the founder and admins.');
+    }
+    if (!id && profile.role !== 'founder') {
+      throw new Error('Only the founder can create client delivery projects.');
+    }
+
+    let assignedTo = blankToNull(data.assigned_to);
     if (!assignedTo && data.deal_id) {
       const { data: deal } = await supabase.from('deals').select('assigned_to').eq('id', data.deal_id).maybeSingle();
       assignedTo = deal?.assigned_to ?? null;
     }
 
-    const values = {
+    const values: Record<string, unknown> = {
       project_name: data.project_name,
       client_name: data.client_name ?? '',
       deal_id: blankToNull(data.deal_id),
@@ -30,7 +39,12 @@ export async function saveProject(formData: FormData) {
       completed_at: data.status === 'completed' ? new Date().toISOString() : null
     };
 
-    const id = blankToNull(formData.get('id'));
+    if (id && profile.role !== 'founder') {
+      delete values.contract_value;
+      delete values.currency;
+      delete values.completed_at;
+    }
+
     if (id) {
       const { error: upErr } = await supabase.from('projects').update(values).eq('id', id);
       if (upErr) throw upErr;
