@@ -34,7 +34,7 @@ const SAFE_REJECTION_CATEGORIES = REJECTION_CATEGORIES.filter((c) => c !== 'post
 
 type ProspectRow = {
   id: string; company_name: string; contact_name: string | null; industry: string | null; phone: string | null;
-  email: string | null; website_url: string | null; location: string | null; source: string | null;
+  email: string | null; whatsapp_link?: string | null; email_link?: string | null; telegram_link?: string | null; prefilled_message?: string | null; website_url: string | null; location: string | null; source: string | null;
   estimated_value: number | string; status: string; notes: string | null; next_follow_up_at: string | null; assigned_to: string | null;
 };
 
@@ -59,6 +59,10 @@ export function ProspectDialog({ action, staff, prospect, canAssign = true }: { 
         <Field label="Source"><Input name="source" defaultValue={prospect?.source ?? ''} placeholder="referral, whatsapp, x, cold outreach…" /></Field>
         <Field label="Phone"><Input name="phone" type="tel" defaultValue={prospect?.phone ?? ''} /></Field>
         <Field label="Email"><Input name="email" type="email" defaultValue={prospect?.email ?? ''} /></Field>
+        <Field label="WhatsApp Link"><Input name="whatsapp_link" defaultValue={prospect?.whatsapp_link ?? ''} placeholder="https://wa.me/234..." /></Field>
+        <Field label="Email Link"><Input name="email_link" defaultValue={prospect?.email_link ?? ''} placeholder="mailto:contact@example.com" /></Field>
+        <Field label="Telegram Link"><Input name="telegram_link" defaultValue={prospect?.telegram_link ?? ''} placeholder="https://t.me/username" /></Field>
+        <Field label="Prefilled Message" className="sm:col-span-2"><Textarea name="prefilled_message" defaultValue={prospect?.prefilled_message ?? ''} placeholder="Hi {contact_name}, I came across {company_name}..." /></Field>
         <Field label="Website"><Input name="website_url" defaultValue={prospect?.website_url ?? ''} /></Field>
         <Field label="Location"><Input name="location" defaultValue={prospect?.location ?? ''} /></Field>
         <Field label="Agreed / estimated value (₦)"><Input name="estimated_value" type="number" min="0" step="0.01" defaultValue={prospect ? String(prospect.estimated_value) : '0'} /></Field>
