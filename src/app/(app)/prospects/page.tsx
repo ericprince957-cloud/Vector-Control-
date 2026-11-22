@@ -85,8 +85,8 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
               <tbody>
                 {rows.map((p) => {
                   const message = p.prefilled_message || `Hello ${p.contact_name || 'there'}, I’m reaching out regarding ${p.company_name}. I’m with Vector Codes and would love to discuss how we could help your business.`;
-                  const waRaw = p.whatsapp_link || p.phone || '';
-                  const wa = waRaw ? (waRaw.startsWith('http') ? (waRaw.includes('?') ? waRaw : `${waRaw}?${new URLSearchParams({ text: message })}`) : `https://wa.me/${waRaw.split('').filter((ch) => ch >= '0' && ch <= '9').join('').replace(/^0/, '234')}?${new URLSearchParams({ text: message })}`) : '';
+                  const waRaw: string = p.whatsapp_link || p.phone || '';
+                  const wa = waRaw ? (waRaw.startsWith('http') ? (waRaw.includes('?') ? waRaw : `${waRaw}?${new URLSearchParams({ text: message })}`) : `https://wa.me/${waRaw.split('').filter((ch: string) => ch >= '0' && ch <= '9').join('').replace(/^0/, '234')}?${new URLSearchParams({ text: message })}`) : '';
                   const emailRaw = p.email_link || p.email || '';
                   const mail = emailRaw ? (emailRaw.startsWith('mailto:') ? (emailRaw.includes('?') ? emailRaw : `${emailRaw}?subject=${encodeURIComponent('A quick introduction from Vector Codes')}&body=${encodeURIComponent(message)}`) : `mailto:${emailRaw}?subject=${encodeURIComponent('A quick introduction from Vector Codes')}&body=${encodeURIComponent(message)}`) : '';
                   const telegramRaw = p.telegram_link || '';

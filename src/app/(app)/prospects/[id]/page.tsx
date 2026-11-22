@@ -64,8 +64,8 @@ export default async function ProspectDetail({ params, searchParams }: { params:
   const thisProspect = [{ id: prospect.id, name: prospect.company_name }];
   const archived = prospect.status === 'disqualified';
   const contactMessage = prospect.prefilled_message || `Hello ${prospect.contact_name || 'there'}, I’m reaching out regarding ${prospect.company_name}. I’m with Vector Codes and would love to discuss how we could help your business.`;
-  const waRaw = prospect.whatsapp_link || prospect.phone || '';
-  const whatsappHref = waRaw ? (waRaw.startsWith('http') ? (waRaw.includes('?') ? waRaw : `${waRaw}?${new URLSearchParams({ text: contactMessage })}`) : `https://wa.me/${waRaw.split('').filter((ch) => ch >= '0' && ch <= '9').join('').replace(/^0/, '234')}?${new URLSearchParams({ text: contactMessage })}`) : '';
+  const waRaw: string = prospect.whatsapp_link || prospect.phone || '';
+  const whatsappHref = waRaw ? (waRaw.startsWith('http') ? (waRaw.includes('?') ? waRaw : `${waRaw}?${new URLSearchParams({ text: contactMessage })}`) : `https://wa.me/${waRaw.split('').filter((ch: string) => ch >= '0' && ch <= '9').join('').replace(/^0/, '234')}?${new URLSearchParams({ text: contactMessage })}`) : '';
   const emailRaw = prospect.email_link || prospect.email || '';
   const emailHref = emailRaw ? (emailRaw.startsWith('mailto:') ? (emailRaw.includes('?') ? emailRaw : `${emailRaw}?subject=${encodeURIComponent('A quick introduction from Vector Codes')}&body=${encodeURIComponent(contactMessage)}`) : `mailto:${emailRaw}?subject=${encodeURIComponent('A quick introduction from Vector Codes')}&body=${encodeURIComponent(contactMessage)}`) : '';
   const tgRaw = prospect.telegram_link || '';
