@@ -42,6 +42,8 @@ export const dealSchema = z.object({
   description: optionalText,
   deal_value: money.default(0),
   amount_paid: money.default(0),
+  initial_payment_method: z.enum(['bank_transfer','cash','card','pos','other']).default('bank_transfer'),
+  initial_paid_at: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/).optional().or(z.literal('')),
   currency: z.string().length(3).default('NGN'),
   expected_close_date: nullableDate,
   assigned_to: z.string().uuid().optional().nullable().or(z.literal('')),
