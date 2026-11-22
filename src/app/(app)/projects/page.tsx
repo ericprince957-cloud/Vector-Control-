@@ -25,6 +25,7 @@ export default async function ProjectsPage() {
   ]);
 
   const staff = (staffList ?? []).map((s) => ({ id: s.id, name: s.full_name || s.email }));
+  const dealOptions = (deals ?? []).map((d) => ({ id: d.id, name: d.title }));
   const list = projects ?? [];
   const today = new Date().toISOString().slice(0, 10);
   const overdue = list.filter((p) => !['completed', 'cancelled'].includes(p.status) && p.due_date && p.due_date < today);
@@ -32,7 +33,7 @@ export default async function ProjectsPage() {
   return (
     <>
       <PageHeader title="Projects" description={`${list.length} total · ${overdue.length} overdue · ${list.filter((p) => p.status === 'completed').length} completed`} />
-      {profile.role === 'founder' ? <ProjectForm action={saveProject} deals={deals ?? []} staff={staff} /> : null}
+      {profile.role === 'founder' ? <ProjectForm action={saveProject} deals={dealOptions} staff={staff} /> : null}
 
       <Card>
         {!list.length ? <EmptyState title="No projects yet" hint="Convert a won deal or create a project manually." /> : (
