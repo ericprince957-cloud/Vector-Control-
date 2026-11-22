@@ -34,7 +34,7 @@ export default async function FinancePage() {
   const pays = paymentsRes.data ?? [];
   const exps = expensesRes.data ?? [];
   const deals = dealsRes.data ?? [];
-  const dealOptions = deals.map((d) => ({ id: d.id, name: `${d.title} — ${d.prospect_id?.company_name ?? ''}` }));
+  const dealOptions = deals.map((d) => ({ id: d.id, name: `${d.title} — ${d.prospect_id?.[0]?.company_name ?? ''}` }));
   const projectOptions = (projectsRes.data ?? []).map((p) => ({ id: p.id, name: p.project_name }));
 
   // Per-deal outstanding: won deal value − net successful payments (refunds netted), min 0.
