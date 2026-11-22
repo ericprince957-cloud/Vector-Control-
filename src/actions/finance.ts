@@ -8,7 +8,7 @@ import { runAction, audit, blankToNull, withAuditWarning } from './helpers';
 export async function savePayment(formData: FormData) {
   return runAction(async (profile) => {
     const { data, error } = parseOrError(paymentSchema, formData);
-    if (error) throw new Error(error);
+    if (error || !data) throw new Error(error || 'Invalid form data');
     const supabase = await createClient();
     const values = {
       deal_id: blankToNull(data.deal_id),
@@ -46,7 +46,7 @@ export async function savePayment(formData: FormData) {
 export async function saveExpense(formData: FormData) {
   return runAction(async (profile) => {
     const { data, error } = parseOrError(expenseSchema, formData);
-    if (error) throw new Error(error);
+    if (error || !data) throw new Error(error || 'Invalid form data');
     const supabase = await createClient();
     const values = {
       title: data.title,
