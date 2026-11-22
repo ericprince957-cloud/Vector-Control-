@@ -3,6 +3,7 @@ import { requireFounder } from '@/lib/auth';
 import { formatDate } from '@/lib/utils';
 import { Card, CardHeader, Table, TH, TD, Badge, Select, Button } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
+import { ActionForm } from '@/components/action-form';
 import { InviteStaffForm } from '@/components/forms';
 import { inviteStaff, updateStaffMember } from '@/actions/staff';
 import { SubmitButton } from '@/components/submit-button';
@@ -37,7 +38,7 @@ export default async function StaffPage() {
                 <TD className="text-xs">{formatDate(s.created_at)}</TD>
                 <TD>
                   {s.id === me.id ? <span className="text-xs text-muted">Protected</span> : (
-                    <form action={updateStaffMember} className="flex flex-wrap items-center gap-2">
+                    <ActionForm action={updateStaffMember} className="flex flex-wrap items-center gap-2">
                       <input type="hidden" name="id" value={s.id} />
                       <Select name="role" defaultValue={s.role} className="!py-1 text-xs">
                         <option value="staff">staff</option>
@@ -47,7 +48,7 @@ export default async function StaffPage() {
                       <SubmitButton variant="ghost" className="!px-2 !py-1 text-xs">
                         {s.is_active ? 'Deactivate' : 'Activate'}
                       </SubmitButton>
-                    </form>
+                    </ActionForm>
                   )}
                 </TD>
               </tr>
