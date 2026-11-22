@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 const STAGES = ['draft', 'proposal_sent', 'negotiation', 'won', 'lost', 'cancelled'] as const;
 
 export default async function DealsPage() {
-  await requireProfile();
+  const profile = await requireProfile();
   const supabase = await createClient();
 
   const [{ data: deals }, { data: prospects }, { data: staffList }] = await Promise.all([
@@ -29,7 +29,7 @@ export default async function DealsPage() {
   return (
     <>
       <PageHeader title="Deals" description={`Expected revenue (open deals): ${formatNGN(expectedRevenue)} — actual revenue counts only successful payment transactions.`} />
-      <DealForm action={saveDeal} prospects={prospects ?? []} staff={staff} />
+      <DealForm action={saveDeal} prospects={prospects ?? []} staff={staff} role={profile.role} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {STAGES.map((stage) => {
@@ -47,14 +47,24 @@ export default async function DealsPage() {
                     <p className="text-xs text-muted">{d.prospect?.company_name ?? '—'}</p>
                     <p className="mt-1 text-sm text-gold tabular-nums">{formatNGN(d.deal_value)}</p>
                     <p className="text-[11px] text-muted">Close: {formatDate(d.expected_close_date)}{d.won_at ? ` · won ${formatDate(d.won_at)}` : ''}</p>
-                    <form action={updateDealStatus} className="mt-2">
-                      <input type="hidden" name="id" value={d.id} />
-                      <Select name="status" defaultValue={d.status} className="!py-1 text-xs">
-                        {DEAL_STATUSES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
-                      </Select>
-                      <SubmitButton variant="ghost" className="mt-1 w-full !px-2 !py-1 text-xs">Update status</SubmitButton>
-                    </form>
-                    {d.status === 'won' ? (
+                    {profile.role === 'founder' ? (
+                      <form action={updateDealStatus} className="mt-2">
+                        <input type="hidden" name="id" value={d.id} />
+                        <Select name="status" defaultValue={d.status} className="!py-1 text-xs">
+                          {DEAL_STATUSES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
+                        </Select>
+                        <SubmitButton variant="ghost" className="mt-1 w-full !px-2 !py-1 text-xs">Update status</SubmitButton>
+                      </form>
+                    ) : d.status === 'proposal_sent' ? (
+                      <form action={updateDealStatus} className="mt-2">
+                        <input type="hidden" name="id" value={d.id} />
+                        <Select name="status" defaultValue="negotiation" className="!py-1 text-xs">
+                          <option value="negotiation">Negotiation</option>
+                        </Select>
+                        <SubmitButton variant="ghost" className="mt-1 w-full !px-2 !py-1 text-xs">Record client response</SubmitButton>
+                      </form>
+                    ) : <p className="mt-2 text-[11px] text-muted">Founder approval required for stage changes</p>}
+                    {d.status === 'won' && profile.role === 'founder' ? (
                       <form action={convertDealToProject}>
                         <input type="hidden" name="id" value={d.id} />
                         <SubmitButton variant="ghost" className="mt-2 w-full !px-2 !py-1 text-xs">Convert to project</SubmitButton>
