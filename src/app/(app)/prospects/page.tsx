@@ -28,7 +28,7 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
 
   let query = supabase
     .from('prospects')
-    .select('id, company_name, contact_name, industry, email, phone, status, source, estimated_value, next_follow_up_at, assigned_to, assigned:profiles!prospects_assigned_to_fkey(full_name)', { count: 'exact' })
+    .select('id, company_name, contact_name, industry, email, phone, whatsapp_link, email_link, telegram_link, prefilled_message, status, source, estimated_value, next_follow_up_at, assigned_to, assigned:profiles!prospects_assigned_to_fkey(full_name)', { count: 'exact' })
     .order(sp.sort === 'company' ? 'company_name' : sp.sort === 'value' ? 'estimated_value' : 'created_at', { ascending: sp.sort === 'company' });
 
   if (q) query = query.or(`company_name.ilike.%${q}%,contact_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);
@@ -80,10 +80,17 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
           <>
             <Table minWidth={820}>
               <thead>
-                <tr><TH>Company</TH><TH>Contact</TH><TH>Status</TH><TH>Source</TH><TH>Est. value</TH><TH>Assigned</TH><TH>Follow-up</TH></tr>
+                <tr><TH>Company</TH><TH>Contact</TH><TH>Contact actions</TH><TH>Status</TH><TH>Source</TH><TH>Est. value</TH><TH>Assigned</TH><TH>Follow-up</TH></tr>
               </thead>
               <tbody>
                 {rows.map((p) => {
+                  const message = p.prefilled_message || `Hello ${p.contact_name || 'there'}, I’m reaching out regarding ${p.company_name}. I’m with Vector Codes and would love to discuss how we could help your business.`;
+                  const waRaw = p.whatsapp_link || p.phone || '';
+                  const wa = waRaw ? (waRaw.startsWith('http') ? waRaw : `https://wa.me/${waRaw.replace(/\\D/g, '').replace(/^0/, '234')}?${new URLSearchParams({ text: message })}`) : '';
+                  const emailRaw = p.email_link || p.email || '';
+                  const mail = emailRaw ? (emailRaw.startsWith('mailto:') ? emailRaw : `mailto:${emailRaw}`) : '';
+                  const telegramRaw = p.telegram_link || '';
+                  const telegram = telegramRaw ? (telegramRaw.startsWith('http') ? telegramRaw : `https://t.me/${telegramRaw.replace(/^@/, '')}`) : '';
                   const overdue = p.next_follow_up_at && p.next_follow_up_at < new Date().toISOString() && !['converted', 'disqualified'].includes(p.status);
                   return (
                     <tr key={p.id} className="hover:bg-surface-2/60">
@@ -92,6 +99,11 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
                         {p.industry ? <p className="text-xs text-muted">{p.industry}</p> : null}
                       </TD>
                       <TD><p>{p.contact_name || '—'}</p><p className="text-xs text-muted">{p.email || p.phone || ''}</p></TD>
+                      <TD><div className="flex flex-wrap gap-2 text-xs">
+                        {wa ? <a href={wa} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline">WhatsApp</a> : null}
+                        {mail ? <a href={mail.includes('?') ? mail : `${mail}?subject=${encodeURIComponent('A quick introduction from Vector Codes')}&body=${encodeURIComponent(message)}`} className="text-sky-600 hover:underline">Email</a> : null}
+                        {telegram ? <a href={telegram.includes('?') ? telegram : `${telegram}?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">Telegram</a> : null}
+                      </div></TD>
                       <TD><Badge tone={prospectTone[p.status]}>{label(p.status)}</Badge></TD>
                       <TD className="text-xs text-muted">{p.source || '—'}</TD>
                       <TD className="tabular-nums">{formatNGN(p.estimated_value)}</TD>
