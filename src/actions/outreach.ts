@@ -8,7 +8,7 @@ import { runAction, audit, blankToNull, withAuditWarning } from './helpers';
 export async function saveOutreach(formData: FormData) {
   return runAction(async (profile) => {
     const { data, error } = parseOrError(outreachSchema, formData);
-    if (error) throw new Error(error);
+    if (error || !data) throw new Error(error || 'Invalid form data');
     const supabase = await createClient();
 
     const { data: created, error: dbErr } = await supabase
