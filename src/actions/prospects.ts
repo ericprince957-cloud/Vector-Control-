@@ -30,11 +30,23 @@ export async function saveProspect(formData: FormData) {
     };
 
     const id = blankToNull(formData.get('id'));
+    const amountPaid = Number(formData.get('amount_paid') ?? 0);
+    if (amountPaid > Number(data.estimated_value)) throw new Error('Amount paid cannot exceed the agreed/estimated value.');
+
     if (id) {
       const { error: upErr } = await supabase.from('prospects').update(values).eq('id', id);
       if (upErr) throw upErr;
+      if (amountPaid > 0) {
+        const { error: payErr } = await supabase.from('payments').insert({
+          prospect_id: id, client_name: data.company_name, amount: amountPaid, currency: data.currency,
+          status: 'successful', payment_method: 'bank_transfer', paid_at: new Date().toISOString().slice(0, 10),
+          transaction_type: 'payment', notes: 'Initial payment recorded from prospect form', recorded_by: profile.id
+        });
+        if (payErr) throw payErr;
+      }
       revalidatePath('/prospects');
       revalidatePath(`/prospects/${id}`);
+      revalidatePath('/finance');
       return withAuditWarning('Prospect updated', await audit('update', 'prospect', id, { company: data.company_name }));
     }
 
@@ -44,7 +56,16 @@ export async function saveProspect(formData: FormData) {
       .select('id')
       .single();
     if (inErr) throw inErr;
+    if (amountPaid > 0) {
+      const { error: payErr } = await supabase.from('payments').insert({
+        prospect_id: created.id, client_name: data.company_name, amount: amountPaid, currency: data.currency,
+        status: 'successful', payment_method: 'bank_transfer', paid_at: new Date().toISOString().slice(0, 10),
+        transaction_type: 'payment', notes: 'Initial payment recorded from prospect form', recorded_by: profile.id
+      });
+      if (payErr) throw payErr;
+    }
     revalidatePath('/prospects');
+    revalidatePath('/finance');
     return withAuditWarning('Prospect added', await audit('create', 'prospect', created.id, { company: data.company_name }));
   });
 }
@@ -113,5 +134,21 @@ export async function findDuplicates() {
   return data.filter((p) => {
     const key = (p.email || p.phone || p.company_name).toLowerCase();
     return key && (seen.get(key)?.length ?? 0) > 1;
+  });
+}
+
+export async function deleteProspect(formData: FormData) {
+  return runAction(async (profile) => {
+    if (profile.role !== 'founder') throw new Error('Only the founder can permanently delete prospects.');
+    const id = String(formData.get('id') ?? '');
+    if (!id) throw new Error('Prospect ID is required');
+    const supabase = await createClient();
+    const { error } = await supabase.from('prospects').delete().eq('id', id);
+    if (error) throw error;
+    revalidatePath('/prospects');
+    revalidatePath('/deals');
+    revalidatePath('/projects');
+    revalidatePath('/finance');
+    return withAuditWarning('Prospect deleted', await audit('delete', 'prospect', id));
   });
 }
