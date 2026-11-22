@@ -11,6 +11,7 @@ export async function saveProspect(formData: FormData) {
     if (error) throw new Error(error);
     const supabase = await createClient();
 
+    const assignedTo = profile.role === 'staff' ? profile.id : blankToNull(data.assigned_to);
     const values = {
       company_name: data.company_name,
       contact_name: data.contact_name ?? '',
@@ -25,7 +26,7 @@ export async function saveProspect(formData: FormData) {
       notes: data.notes ?? '',
       status: data.status,
       next_follow_up_at: blankToNull(data.next_follow_up_at as string),
-      assigned_to: blankToNull(data.assigned_to)
+      assigned_to: assignedTo
     };
 
     const id = blankToNull(formData.get('id'));
