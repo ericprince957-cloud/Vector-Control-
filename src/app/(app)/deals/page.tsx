@@ -23,13 +23,14 @@ export default async function DealsPage() {
   ]);
 
   const staff = (staffList ?? []).map((s) => ({ id: s.id, name: s.full_name || s.email }));
+  const prospectOptions = (prospects ?? []).map((p) => ({ id: p.id, name: p.company_name }));
   const list = deals ?? [];
   const expectedRevenue = list.filter((d) => !['won', 'lost', 'cancelled'].includes(d.status)).reduce((s, d) => s + Number(d.deal_value), 0);
 
   return (
     <>
       <PageHeader title="Deals" description={`Expected revenue (open deals): ${formatNGN(expectedRevenue)} — actual revenue counts only successful payment transactions.`} />
-      <DealForm action={saveDeal} prospects={prospects ?? []} staff={staff} role={profile.role} />
+      <DealForm action={saveDeal} prospects={prospectOptions} staff={staff} role={profile.role} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {STAGES.map((stage) => {
