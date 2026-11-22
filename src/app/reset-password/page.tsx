@@ -1,25 +1,23 @@
+import type { Metadata } from 'next';
 import { updatePassword } from '@/actions/auth';
+import { AuthFrame } from '@/components/auth-frame';
 import { SubmitButton } from '@/components/submit-button';
-import { Card, Field, Input } from '@/components/ui';
+import { Field, Input, Notice } from '@/components/ui';
+
+export const metadata: Metadata = { title: 'Set a new password' };
 
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md p-8">
-        <h1 className="mb-1 text-lg font-semibold">Set a new password</h1>
-        <p className="mb-6 text-xs text-muted">Choose a strong password of at least 8 characters.</p>
-        {error ? <p className="mb-4 rounded-md border border-red-900 bg-red-950/30 px-3 py-2 text-xs text-red-400">{error}</p> : null}
+    <AuthFrame title="Set a new password" subtitle="Choose a strong password of at least 8 characters.">
+      <div className="space-y-4">
+        {error ? <Notice tone="danger">{error}</Notice> : null}
         <form action={updatePassword} className="space-y-4">
-          <Field label="New password">
-            <Input name="password" type="password" required minLength={8} />
-          </Field>
-          <Field label="Confirm password">
-            <Input name="confirm" type="password" required minLength={8} />
-          </Field>
-          <SubmitButton className="w-full">Update password</SubmitButton>
+          <Field label="New password"><Input name="password" type="password" required minLength={8} autoComplete="new-password" /></Field>
+          <Field label="Confirm password"><Input name="confirm" type="password" required minLength={8} autoComplete="new-password" /></Field>
+          <SubmitButton className="w-full" pendingLabel="Updating…">Update password</SubmitButton>
         </form>
-      </Card>
-    </main>
+      </div>
+    </AuthFrame>
   );
 }

@@ -1,23 +1,68 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-background: #090909;
-  --color-surface: #111111;
-  --color-surface-2: #181818;
-  --color-line: #292929;
-  --color-gold: #D4AF37;
-  --color-gold-light: #E5C76B;
-  --color-text: #FFFFFF;
-  --color-muted: #A0A0A0;
+  --color-background: #0a0a0a;
+  --color-surface: #101010;
+  --color-surface-2: #161616;
+  --color-surface-3: #1d1d1d;
+  --color-line: #262626;
+  --color-line-strong: #343434;
+  --color-gold: #d4af37;
+  --color-gold-light: #e5c76b;
+  --color-gold-dim: #8a7420;
+  --color-text: #ffffff;
+  --color-muted: #9a9a9a;
+  --color-success: #34d399;
+  --color-danger: #f87171;
+  --color-warn: #fbbf24;
+  --color-info: #7dd3fc;
+  --radius-card: 6px;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
 }
+
+html { color-scheme: dark; }
 
 body {
   background: var(--color-background);
   color: var(--color-text);
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.003em;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection { background: rgba(212, 175, 55, 0.3); }
 
 input, select, textarea { color-scheme: dark; }
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* Native <dialog> styling shared by modals and confirmation dialogs */
+dialog.vc-dialog {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  padding: 0;
+  margin: auto;
+  max-height: calc(100dvh - 2rem);
+  width: calc(100% - 2rem);
+  overflow: hidden;
+}
+dialog.vc-dialog::backdrop { background: rgba(0, 0, 0, 0.72); }
+
+@keyframes vc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.vc-skeleton { animation: vc-pulse 1.6s ease-in-out infinite; background: var(--color-surface-3); border-radius: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vc-skeleton { animation: none; }
+  * { transition-duration: 0.01ms !important; }
+}
+
+/* Thin, quiet scrollbars for table wrappers */
+.vc-scroll { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }

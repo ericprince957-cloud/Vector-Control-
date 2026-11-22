@@ -1,109 +1,111 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { requireProfile } from '@/lib/auth';
 import { formatNGN, formatDate } from '@/lib/utils';
-import { Card, Table, TH, TD, EmptyState, Badge, Input, Select, Button, Textarea } from '@/components/ui';
+import { Card, Table, TH, TD, EmptyState, Badge, ErrorState, LinkButton } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
-import { ActionForm } from '@/components/action-form';
-import { ProspectForm } from '@/components/forms';
+import { FilterBar } from '@/components/filter-bar';
+import { Pagination } from '@/components/pagination';
+import { ProspectDialog } from '@/components/forms';
+import { CsvImportDialog } from '@/components/csv-import';
 import { saveProspect, importProspectsCSV } from '@/actions/prospects';
 import { PROSPECT_STATUSES, label } from '@/lib/constants';
+import { PAGE_SIZE, pageParam, rangeFor, safeSearch, one, prospectTone } from '@/lib/ui-helpers';
 
+export const metadata: Metadata = { title: 'Prospects', description: 'CRM pipeline of prospective clients.' };
 export const dynamic = 'force-dynamic';
 
-const toneMap: Record<string, 'neutral' | 'gold' | 'green' | 'red' | 'blue' | 'amber'> = {
-  new: 'blue', contacted: 'neutral', responded: 'blue', interested: 'gold',
-  qualified: 'gold', converted: 'green', disqualified: 'red', on_hold: 'amber'
-};
+type SP = { q?: string; status?: string; source?: string; staff?: string; sort?: string; page?: string };
 
-export default async function ProspectsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; industry?: string; staff?: string; sort?: string }> }) {
-  await requireProfile();
+export default async function ProspectsPage({ searchParams }: { searchParams: Promise<SP> }) {
+  const profile = await requireProfile();
   const sp = await searchParams;
   const supabase = await createClient();
+  const page = pageParam(sp.page);
+  const [from, to] = rangeFor(page);
+  const q = safeSearch(sp.q);
 
-  let query = supabase.from('prospects').select('*, assigned_profile:profiles!prospects_assigned_to_fkey(full_name)').order(sp.sort === 'company' ? 'company_name' : 'created_at', { ascending: sp.sort === 'company' });
+  let query = supabase
+    .from('prospects')
+    .select('id, company_name, contact_name, industry, email, phone, status, source, estimated_value, next_follow_up_at, assigned_to, assigned:profiles!prospects_assigned_to_fkey(full_name)', { count: 'exact' })
+    .order(sp.sort === 'company' ? 'company_name' : sp.sort === 'value' ? 'estimated_value' : 'created_at', { ascending: sp.sort === 'company' });
 
-  if (sp.q) query = query.or(`company_name.ilike.%${sp.q}%,contact_name.ilike.%${sp.q}%,email.ilike.%${sp.q}%`);
-  if (sp.status) query = query.eq('status', sp.status);
-  if (sp.industry) query = query.eq('industry', sp.industry);
-  if (sp.staff) query = query.eq('assigned_to', sp.staff);
+  if (q) query = query.or(`company_name.ilike.%${q}%,contact_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);
+  if (sp.status && (PROSPECT_STATUSES as readonly string[]).includes(sp.status)) query = query.eq('status', sp.status);
+  if (sp.source) query = query.eq('source', sp.source);
+  if (sp.staff === 'unassigned') query = query.is('assigned_to', null);
+  else if (sp.staff) query = query.eq('assigned_to', sp.staff);
 
-  const [{ data: prospects, error }, { data: staffList }, { data: industries }] = await Promise.all([
-    query.limit(200),
+  const [{ data: prospects, count, error }, { data: staffList }, { data: sources }] = await Promise.all([
+    query.range(from, to),
     supabase.from('profiles').select('id, full_name, email').eq('is_active', true),
-    supabase.from('prospects').select('industry').not('industry', 'eq', '')
+    supabase.from('prospects').select('source').not('source', 'is', null).neq('source', '')
   ]);
 
   const staff = (staffList ?? []).map((s) => ({ id: s.id, name: s.full_name || s.email }));
-  const industryList = [...new Set((industries ?? []).map((i) => i.industry))];
+  const sourceList = [...new Set((sources ?? []).map((s) => s.source as string))].sort();
+  const isStaff = profile.role === 'staff';
+  const rows = prospects ?? [];
 
   return (
     <>
-      <PageHeader title="Prospects" description="Your CRM pipeline of businesses." />
-      <ProspectForm action={saveProspect} staff={staff} />
+      <PageHeader title="Prospects" description={isStaff ? 'Prospects you created or are assigned to.' : 'Every business in the Vector Codes pipeline.'}>
+        <LinkButton href="/api/export?type=prospects" variant="ghost">Export CSV</LinkButton>
+        <CsvImportDialog action={importProspectsCSV} />
+        <ProspectDialog action={saveProspect} staff={staff} canAssign={!isStaff} />
+      </PageHeader>
 
-      {error ? <p className="mb-4 rounded-md border border-red-900 bg-red-950/30 px-3 py-2 text-xs text-red-400">Could not load prospects: {error.message}</p> : null}
+      <FilterBar
+        basePath="/prospects"
+        values={{ q: sp.q, status: sp.status, source: sp.source, staff: sp.staff, sort: sp.sort }}
+        filters={[
+          { kind: 'search', name: 'q', placeholder: 'Search company, contact, email or phone…' },
+          { kind: 'select', name: 'status', label: 'Status', options: PROSPECT_STATUSES.map((s) => ({ value: s, label: label(s) })) },
+          { kind: 'select', name: 'source', label: 'Source', options: sourceList.map((s) => ({ value: s, label: s })) },
+          ...(isStaff ? [] : [{ kind: 'select' as const, name: 'staff', label: 'Assigned to', options: [{ value: 'unassigned', label: 'Unassigned' }, ...staff.map((s) => ({ value: s.id, label: s.name }))] }]),
+          { kind: 'select', name: 'sort', label: 'Sort', options: [{ value: 'company', label: 'Company A–Z' }, { value: 'value', label: 'Highest value' }] }
+        ]}
+      />
 
-      <Card className="mb-4 p-4">
-        <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <Input name="q" placeholder="Search company, contact, email…" defaultValue={sp.q ?? ''} />
-          <Select name="status" defaultValue={sp.status ?? ''}>
-            <option value="">All statuses</option>
-            {PROSPECT_STATUSES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
-          </Select>
-          <Select name="industry" defaultValue={sp.industry ?? ''}>
-            <option value="">All industries</option>
-            {industryList.map((i) => <option key={i} value={i}>{i}</option>)}
-          </Select>
-          <Select name="staff" defaultValue={sp.staff ?? ''}>
-            <option value="">All staff</option>
-            {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </Select>
-          <div className="flex gap-2">
-            <Select name="sort" defaultValue={sp.sort ?? 'date'}>
-              <option value="date">Newest first</option>
-              <option value="company">Company A–Z</option>
-            </Select>
-            <Button type="submit" variant="ghost">Filter</Button>
-          </div>
-        </form>
-      </Card>
+      {error ? <ErrorState title="Could not load prospects" message={error.message} /> : null}
 
       <Card>
-        {!(prospects ?? []).length ? <EmptyState title="No prospects found" hint="Add your first prospect or adjust filters." /> : (
-          <Table>
-            <thead><tr><TH>Company</TH><TH>Contact</TH><TH>Status</TH><TH>Est. value</TH><TH>Assigned</TH><TH>Follow-up</TH></tr></thead>
-            <tbody>
-              {(prospects ?? []).map((p) => (
-                <tr key={p.id} className="hover:bg-surface-2/60">
-                  <TD><Link href={`/prospects/${p.id}`} className="font-medium hover:text-gold">{p.company_name}</Link><p className="text-xs text-muted">{p.industry}</p></TD>
-                  <TD><p>{p.contact_name || '—'}</p><p className="text-xs text-muted">{p.email || p.phone || ''}</p></TD>
-                  <TD><Badge tone={toneMap[p.status]}>{label(p.status)}</Badge></TD>
-                  <TD className="tabular-nums">{formatNGN(p.estimated_value)}</TD>
-                  <TD className="text-xs text-muted">{p.assigned_profile?.full_name ?? 'Unassigned'}</TD>
-                  <TD className="text-xs">{formatDate(p.next_follow_up_at)}</TD>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
+        {!rows.length && !error ? (
+          <EmptyState
+            title={q || sp.status || sp.source || sp.staff ? 'No prospects match these filters' : 'No prospects yet'}
+            hint={q || sp.status || sp.source || sp.staff ? 'Try clearing a filter.' : 'Add your first prospect or import a CSV to get started.'}
+          />
+        ) : (
+          <>
+            <Table minWidth={820}>
+              <thead>
+                <tr><TH>Company</TH><TH>Contact</TH><TH>Status</TH><TH>Source</TH><TH>Est. value</TH><TH>Assigned</TH><TH>Follow-up</TH></tr>
+              </thead>
+              <tbody>
+                {rows.map((p) => {
+                  const overdue = p.next_follow_up_at && p.next_follow_up_at < new Date().toISOString() && !['converted', 'disqualified'].includes(p.status);
+                  return (
+                    <tr key={p.id} className="hover:bg-surface-2/60">
+                      <TD>
+                        <Link href={`/prospects/${p.id}`} className="font-medium hover:text-gold">{p.company_name}</Link>
+                        {p.industry ? <p className="text-xs text-muted">{p.industry}</p> : null}
+                      </TD>
+                      <TD><p>{p.contact_name || '—'}</p><p className="text-xs text-muted">{p.email || p.phone || ''}</p></TD>
+                      <TD><Badge tone={prospectTone[p.status]}>{label(p.status)}</Badge></TD>
+                      <TD className="text-xs text-muted">{p.source || '—'}</TD>
+                      <TD className="tabular-nums">{formatNGN(p.estimated_value)}</TD>
+                      <TD className="text-xs text-muted">{one(p.assigned as { full_name: string } | { full_name: string }[] | null)?.full_name ?? 'Unassigned'}</TD>
+                      <TD className={`text-xs ${overdue ? 'text-danger' : ''}`}>{formatDate(p.next_follow_up_at)}{overdue ? ' · overdue' : ''}</TD>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+            <Pagination basePath="/prospects" page={page} pageSize={PAGE_SIZE} total={count ?? rows.length} params={{ q: sp.q, status: sp.status, source: sp.source, staff: sp.staff, sort: sp.sort }} />
+          </>
         )}
       </Card>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card className="p-5">
-          <h3 className="mb-2 text-sm font-semibold">Import prospects from CSV</h3>
-          <p className="mb-3 text-xs text-muted">Headers: company name, contact name, industry, phone, email, website, location, source, estimated value</p>
-          <ActionForm action={importProspectsCSV} className="space-y-3">
-            <Textarea name="csv" placeholder={'company name,contact name,industry,phone,email\nAcme Ltd,John Tech,software,080…,john@acme.com'} className="font-mono text-xs" />
-            <Button type="submit" variant="ghost">Import CSV</Button>
-          </ActionForm>
-        </Card>
-        <Card className="p-5">
-          <h3 className="mb-2 text-sm font-semibold">Export</h3>
-          <p className="mb-3 text-xs text-muted">Download the full prospect list as CSV.</p>
-          <a href="/api/export?type=prospects"><Button variant="ghost">Export prospects CSV</Button></a>
-        </Card>
-      </div>
     </>
   );
 }

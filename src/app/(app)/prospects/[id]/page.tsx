@@ -1,85 +1,188 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { requireProfile } from '@/lib/auth';
 import { formatNGN, formatDate } from '@/lib/utils';
-import { Card, CardHeader, Table, TH, TD, EmptyState, Badge, Button } from '@/components/ui';
+import { Card, CardHeader, Table, TH, TD, EmptyState, Badge, Tabs, DetailRow, Button, Select, LinkButton } from '@/components/ui';
+import { PageHeader } from '@/components/page-header';
+import { ActionForm } from '@/components/action-form';
+import { ProspectDialog, OutreachDialog, TaskDialog } from '@/components/forms';
 import { label } from '@/lib/constants';
-import { archiveProspect } from '@/actions/prospects';
+import { archiveProspect, saveProspect } from '@/actions/prospects';
+import { saveOutreach } from '@/actions/outreach';
+import { saveTask } from '@/actions/tasks';
+import { assignRecord } from '@/actions/staff';
+import { one, prospectTone, dealTone, taskTone, priorityTone } from '@/lib/ui-helpers';
 
 export const dynamic = 'force-dynamic';
 
-const TABS = ['overview', 'outreach', 'deals', 'tasks', 'notes'] as const;
+const TAB_KEYS = ['overview', 'history', 'outreach', 'deals', 'tasks', 'notes'] as const;
+type TabKey = (typeof TAB_KEYS)[number];
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase.from('prospects').select('company_name').eq('id', id).maybeSingle();
+  return { title: data?.company_name ?? 'Prospect' };
+}
 
 export default async function ProspectDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
-  await requireProfile();
+  const profile = await requireProfile();
   const { id } = await params;
-  const tab = (await searchParams).tab ?? 'overview';
+  const rawTab = (await searchParams).tab ?? 'overview';
+  const tab: TabKey = (TAB_KEYS as readonly string[]).includes(rawTab) ? (rawTab as TabKey) : 'overview';
   const supabase = await createClient();
+  const isStaff = profile.role === 'staff';
 
-  const { data: prospect } = await supabase.from('prospects').select('*, assigned_profile:profiles!prospects_assigned_to_fkey(full_name)').eq('id', id).single();
+  const { data: prospect } = await supabase
+    .from('prospects')
+    .select('*, assigned:profiles!prospects_assigned_to_fkey(full_name)')
+    .eq('id', id)
+    .maybeSingle();
   if (!prospect) notFound();
 
-  const [outreachRes, dealsRes, tasksRes] = await Promise.all([
-    supabase.from('outreach_activities').select('*').eq('prospect_id', id).order('contacted_at', { ascending: false }),
+  const [outreachRes, dealsRes, tasksRes, rejectionsRes, staffRes, projectsRes] = await Promise.all([
+    supabase.from('outreach_activities').select('*, creator:profiles!outreach_activities_created_by_fkey(full_name)').eq('prospect_id', id).order('contacted_at', { ascending: false }),
     supabase.from('deals').select('*').eq('prospect_id', id).order('created_at', { ascending: false }),
-    supabase.from('tasks').select('*').eq('prospect_id', id).order('created_at', { ascending: false })
+    supabase.from('tasks').select('*, assignee:profiles!tasks_assigned_to_fkey(full_name)').eq('prospect_id', id).order('created_at', { ascending: false }),
+    supabase.from('rejections').select('*').eq('prospect_id', id).order('rejected_at', { ascending: false }),
+    supabase.from('profiles').select('id, full_name, email').eq('is_active', true),
+    supabase.from('projects').select('id, project_name').order('created_at', { ascending: false })
   ]);
+
+  const outreach = outreachRes.data ?? [];
+  const deals = dealsRes.data ?? [];
+  const tasks = tasksRes.data ?? [];
+  const rejections = rejectionsRes.data ?? [];
+  const staff = (staffRes.data ?? []).map((s) => ({ id: s.id, name: s.full_name || s.email }));
+  const projectOptions = (projectsRes.data ?? []).map((p) => ({ id: p.id, name: p.project_name }));
+  const thisProspect = [{ id: prospect.id, name: prospect.company_name }];
+  const archived = prospect.status === 'disqualified';
+
+  // Chronological history across every record linked to this prospect.
+  const history = [
+    { at: prospect.created_at, title: 'Prospect added', detail: prospect.source ? `Source: ${prospect.source}` : '' },
+    ...outreach.map((o) => ({ at: o.contacted_at, title: `${label(o.direction)} ${label(o.channel)}`, detail: `${label(o.outcome ?? 'no_response')}${o.message_summary ? ` — ${o.message_summary}` : ''}` })),
+    ...deals.map((d) => ({ at: d.created_at, title: `Deal: ${d.title}`, detail: `${label(d.status)} · ${formatNGN(d.deal_value)}` })),
+    ...tasks.map((t) => ({ at: t.created_at, title: `Task: ${t.title}`, detail: label(t.status) })),
+    ...rejections.map((r) => ({ at: r.rejected_at, title: 'Rejection recorded', detail: `${label(r.category)}${r.reason ? ` — ${r.reason}` : ''}` }))
+  ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+
+  const base = `/prospects/${id}`;
+  const tabs = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'history', label: 'History' },
+    { key: 'outreach', label: `Outreach (${outreach.length})` },
+    { key: 'deals', label: `Deals (${deals.length})` },
+    { key: 'tasks', label: `Tasks (${tasks.length})` },
+    { key: 'notes', label: 'Notes' }
+  ].map((t) => ({ ...t, href: `${base}?tab=${t.key}` }));
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link href="/prospects" className="text-xs text-muted hover:text-gold">← Back to prospects</Link>
-          <h1 className="mt-1 text-lg font-semibold">{prospect.company_name}</h1>
-          <p className="text-sm text-muted">{prospect.contact_name}{prospect.industry ? ` · ${prospect.industry}` : ''}</p>
-        </div>
-        <div className="flex gap-2">
-          <Badge tone="gold">{label(prospect.status)}</Badge>
-          <ActionForm action={archiveProspect}>
+      <PageHeader
+        back={{ href: '/prospects', label: 'All prospects' }}
+        title={prospect.company_name}
+        description={[prospect.contact_name, prospect.industry, prospect.location].filter(Boolean).join(' · ') || undefined}
+      >
+        <Badge tone={prospectTone[prospect.status]}>{label(prospect.status)}</Badge>
+        <ProspectDialog action={saveProspect} staff={staff} canAssign={!isStaff} prospect={prospect} />
+        <OutreachDialog action={saveOutreach} prospects={thisProspect} defaultProspectId={prospect.id} />
+        <TaskDialog action={saveTask} staff={staff} prospects={thisProspect} projects={projectOptions} defaultProspectId={prospect.id} />
+        {!archived ? (
+          <ActionForm
+            action={archiveProspect}
+            confirm={{
+              title: 'Archive this prospect?',
+              description: 'The prospect will be marked disqualified. All outreach, deals and history are preserved and nothing is deleted.',
+              confirmLabel: 'Archive prospect'
+            }}
+          >
             <input type="hidden" name="id" value={prospect.id} />
-            <Button variant="danger" type="submit">Archive</Button>
+            <Button type="submit" variant="danger">Archive</Button>
           </ActionForm>
-        </div>
-      </div>
+        ) : null}
+      </PageHeader>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {TABS.map((t) => (
-          <Link key={t} href={`/prospects/${id}?tab=${t}`}>
-            <span className={`inline-block rounded-md border px-3 py-1.5 text-xs capitalize ${tab === t ? 'border-gold/60 text-gold' : 'border-line text-muted hover:text-text'}`}>{t}</span>
-          </Link>
-        ))}
-      </div>
+      <Tabs tabs={tabs} active={tab} />
 
       {tab === 'overview' ? (
-        <Card className="p-5">
-          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 text-sm">
-            {[
-              ['Email', prospect.email || '—'], ['Phone', prospect.phone || '—'], ['Website', prospect.website_url || '—'],
-              ['Location', prospect.location || '—'], ['Source', prospect.source || '—'], ['Estimated value', formatNGN(prospect.estimated_value)],
-              ['Assigned to', prospect.assigned_profile?.full_name ?? 'Unassigned'],
-              ['Created', formatDate(prospect.created_at)], ['Next follow-up', formatDate(prospect.next_follow_up_at)]
-            ].map(([k, v]) => (
-              <div key={k as string}><dt className="text-xs text-muted">{k}</dt><dd className="mt-0.5">{v}</dd></div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardHeader title="Business & contact details" />
+            <dl className="px-4 py-1">
+              <DetailRow label="Contact person">{prospect.contact_name || '—'}</DetailRow>
+              <DetailRow label="Email">{prospect.email ? <a className="hover:text-gold" href={`mailto:${prospect.email}`}>{prospect.email}</a> : '—'}</DetailRow>
+              <DetailRow label="Phone">{prospect.phone || '—'}</DetailRow>
+              <DetailRow label="Website">{prospect.website_url || '—'}</DetailRow>
+              <DetailRow label="Location">{prospect.location || '—'}</DetailRow>
+              <DetailRow label="Industry">{prospect.industry || '—'}</DetailRow>
+              <DetailRow label="Source">{prospect.source || '—'}</DetailRow>
+              <DetailRow label="Estimated value">{formatNGN(prospect.estimated_value)}</DetailRow>
+              <DetailRow label="Next follow-up">{formatDate(prospect.next_follow_up_at)}</DetailRow>
+              <DetailRow label="Added">{formatDate(prospect.created_at)}</DetailRow>
+            </dl>
+          </Card>
+
+          <div className="space-y-4">
+            <Card>
+              <CardHeader title="Assignment" />
+              <div className="p-4">
+                <p className="text-sm">{one(prospect.assigned as { full_name: string } | { full_name: string }[] | null)?.full_name ?? 'Unassigned'}</p>
+                {!isStaff ? (
+                  <ActionForm action={assignRecord} className="mt-3 flex gap-2">
+                    <input type="hidden" name="record_type" value="prospect" />
+                    <input type="hidden" name="record_id" value={prospect.id} />
+                    <Select name="staff_id" aria-label="Assign to" defaultValue={prospect.assigned_to ?? ''}>
+                      <option value="">Unassigned</option>
+                      {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </Select>
+                    <Button type="submit" variant="ghost">Assign</Button>
+                  </ActionForm>
+                ) : null}
+              </div>
+            </Card>
+            <Card>
+              <CardHeader title="Next steps" />
+              <div className="space-y-2 p-4">
+                <LinkButton href="/deals" variant="ghost" className="w-full">Go to deals</LinkButton>
+                <p className="text-[11px] text-muted">Create a deal from the Deals page and link it to this prospect.</p>
+              </div>
+            </Card>
+          </div>
+        </div>
+      ) : null}
+
+      {tab === 'history' ? (
+        <Card>
+          <CardHeader title="Prospect history" subtitle="Everything recorded against this prospect, newest first" />
+          <ol className="divide-y divide-line/60">
+            {history.map((h, i) => (
+              <li key={i} className="flex gap-4 px-4 py-3 text-sm">
+                <span className="w-24 shrink-0 text-xs text-muted">{formatDate(h.at)}</span>
+                <span className="min-w-0"><span className="block">{h.title}</span>{h.detail ? <span className="block break-words text-xs text-muted">{h.detail}</span> : null}</span>
+              </li>
             ))}
-          </dl>
+          </ol>
         </Card>
       ) : null}
 
       {tab === 'outreach' ? (
         <Card>
-          <CardHeader title="Outreach history" subtitle={`${outreachRes.data?.length ?? 0} records`} />
-          {!(outreachRes.data ?? []).length ? <EmptyState title="No outreach recorded" /> : (
-            <Table>
-              <thead><tr><TH>Date</TH><TH>Channel</TH><TH>Direction</TH><TH>Outcome</TH><TH>Summary</TH></tr></thead>
+          <CardHeader title="Outreach history" subtitle={`${outreach.length} records`} />
+          {!outreach.length ? <EmptyState title="No outreach recorded" hint="Use “Record outreach” above after you contact this prospect." /> : (
+            <Table minWidth={720}>
+              <thead><tr><TH>Date</TH><TH>Channel</TH><TH>Direction</TH><TH>Outcome</TH><TH>By</TH><TH>Summary</TH></tr></thead>
               <tbody>
-                {(outreachRes.data ?? []).map((o) => (
+                {outreach.map((o) => (
                   <tr key={o.id}>
                     <TD className="text-xs">{formatDate(o.contacted_at)}</TD>
-                    <TD className="capitalize">{o.channel}</TD>
-                    <TD className="capitalize text-muted">{o.direction}</TD>
-                    <TD><Badge>{label(o.outcome)}</Badge></TD>
-                    <TD className="max-w-xs truncate text-xs text-muted">{o.message_summary}</TD>
+                    <TD>{label(o.channel)}</TD>
+                    <TD className="text-muted">{label(o.direction)}</TD>
+                    <TD><Badge>{label(o.outcome ?? 'no_response')}</Badge></TD>
+                    <TD className="text-xs text-muted">{one(o.creator as { full_name: string } | { full_name: string }[] | null)?.full_name ?? '—'}</TD>
+                    <TD className="max-w-xs text-xs text-muted">{o.message_summary}</TD>
                   </tr>
                 ))}
               </tbody>
@@ -90,14 +193,15 @@ export default async function ProspectDetail({ params, searchParams }: { params:
 
       {tab === 'deals' ? (
         <Card>
-          <CardHeader title="Deals" />
-          {!(dealsRes.data ?? []).length ? <EmptyState title="No deals for this prospect" /> : (
-            <Table>
-              <thead><tr><TH>Title</TH><TH>Status</TH><TH>Value</TH><TH>Created</TH></tr></thead>
+          <CardHeader title="Deals" action={<LinkButton href="/deals" variant="subtle" size="sm">Open deals</LinkButton>} />
+          {!deals.length ? <EmptyState title="No deals for this prospect" /> : (
+            <Table minWidth={560}>
+              <thead><tr><TH>Deal</TH><TH>Stage</TH><TH>Value</TH><TH>Created</TH></tr></thead>
               <tbody>
-                {(dealsRes.data ?? []).map((d) => (
+                {deals.map((d) => (
                   <tr key={d.id}>
-                    <TD>{d.title}</TD><TD><Badge>{label(d.status)}</Badge></TD>
+                    <TD><Link href={`/deals/${d.id}`} className="font-medium hover:text-gold">{d.title}</Link></TD>
+                    <TD><Badge tone={dealTone[d.status]}>{label(d.status)}</Badge></TD>
                     <TD className="tabular-nums">{formatNGN(d.deal_value)}</TD>
                     <TD className="text-xs text-muted">{formatDate(d.created_at)}</TD>
                   </tr>
@@ -111,15 +215,17 @@ export default async function ProspectDetail({ params, searchParams }: { params:
       {tab === 'tasks' ? (
         <Card>
           <CardHeader title="Tasks" />
-          {!(tasksRes.data ?? []).length ? <EmptyState title="No tasks for this prospect" /> : (
-            <Table>
-              <thead><tr><TH>Title</TH><TH>Priority</TH><TH>Due</TH><TH>Status</TH></tr></thead>
+          {!tasks.length ? <EmptyState title="No tasks for this prospect" /> : (
+            <Table minWidth={560}>
+              <thead><tr><TH>Task</TH><TH>Priority</TH><TH>Due</TH><TH>Assignee</TH><TH>Status</TH></tr></thead>
               <tbody>
-                {(tasksRes.data ?? []).map((t) => (
+                {tasks.map((t) => (
                   <tr key={t.id}>
-                    <TD>{t.title}</TD><TD className="capitalize">{t.priority}</TD>
+                    <TD>{t.title}</TD>
+                    <TD><Badge tone={priorityTone[t.priority]}>{t.priority}</Badge></TD>
                     <TD className="text-xs">{formatDate(t.due_at)}</TD>
-                    <TD><Badge tone={t.status === 'done' ? 'green' : 'amber'}>{label(t.status)}</Badge></TD>
+                    <TD className="text-xs text-muted">{one(t.assignee as { full_name: string } | { full_name: string }[] | null)?.full_name ?? 'Unassigned'}</TD>
+                    <TD><Badge tone={taskTone[t.status]}>{label(t.status)}</Badge></TD>
                   </tr>
                 ))}
               </tbody>
@@ -129,7 +235,7 @@ export default async function ProspectDetail({ params, searchParams }: { params:
       ) : null}
 
       {tab === 'notes' ? (
-        <Card className="p-5"><p className="whitespace-pre-wrap text-sm text-muted">{prospect.notes || 'No notes recorded.'}</p></Card>
+        <Card className="p-5"><p className="whitespace-pre-wrap text-sm text-muted">{prospect.notes || 'No notes recorded. Use Edit to add notes.'}</p></Card>
       ) : null}
     </>
   );
