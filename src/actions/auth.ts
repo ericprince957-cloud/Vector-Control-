@@ -13,19 +13,21 @@ export async function login(formData: FormData) {
   if (error) redirect('/login?error=' + encodeURIComponent('Invalid email or password'));
 
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabase
+  const { data: profileRecord } = await supabase
     .from('profiles')
     .select('is_active')
     .eq('id', user?.id ?? '')
-    .single();
+    .maybeSingle();
+
+  // Keep this narrow runtime shape explicit: the query can return no profile
+  // during auth bootstrap, and no caller should infer access from user metadata.
+  const profile = profileRecord as { is_active: boolean } | null;
 
   if (!profile) {
     await supabase.auth.signOut();
     redirect('/login?error=' + encodeURIComponent('No staff profile exists for this account'));
   }
   if (!profile.is_active) {
-    // Keep the session (so the user can be shown a clear restricted page and
-    // sign out cleanly) but send them to the access-denied screen.
     redirect('/access-denied');
   }
 
