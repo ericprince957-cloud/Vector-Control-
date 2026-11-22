@@ -69,11 +69,38 @@ export async function saveDeal(formData: FormData) {
       .select('id')
       .single();
     if (inErr) throw inErr;
-    if (amountPaid > 0) {
+    // A prospect may already have an initial payment recorded before a deal is created.
+    // Treat amount_paid as the total paid-to-date, attach unassigned prospect payments
+    // to this deal, and only insert any additional amount not already in the ledger.
+    const { data: priorPayments, error: priorPaymentsError } = await supabase
+      .from('payments')
+      .select('id, amount, status, transaction_type')
+      .eq('prospect_id', data.prospect_id)
+      .is('deal_id', null)
+      .is('project_id', null);
+    if (priorPaymentsError) throw priorPaymentsError;
+
+    const existingNetPaid = (priorPayments ?? []).reduce((total, payment) => {
+      if (payment.status !== 'successful') return total;
+      return total + (payment.transaction_type === 'refund' ? -Number(payment.amount) : Number(payment.amount));
+    }, 0);
+
+    if ((priorPayments ?? []).length > 0) {
+      const { error: linkError } = await supabase
+        .from('payments')
+        .update({ deal_id: created.id })
+        .eq('prospect_id', data.prospect_id)
+        .is('deal_id', null)
+        .is('project_id', null);
+      if (linkError) throw linkError;
+    }
+
+    const additionalPayment = Math.max(0, amountPaid - existingNetPaid);
+    if (additionalPayment > 0) {
       const { error: payErr } = await supabase.from('payments').insert({
-        deal_id: created.id, prospect_id: data.prospect_id, client_name: data.title, amount: amountPaid, currency: data.currency,
-        status: 'successful', payment_method: 'bank_transfer', paid_at: new Date().toISOString().slice(0, 10),
-        transaction_type: 'payment', notes: 'Initial payment recorded from deal form', recorded_by: profile.id
+        deal_id: created.id, prospect_id: data.prospect_id, client_name: data.title, amount: additionalPayment, currency: data.currency,
+        status: 'successful', payment_method: data.initial_payment_method, paid_at: data.initial_paid_at || new Date().toISOString().slice(0, 10),
+        transaction_type: 'payment', notes: existingNetPaid > 0 ? 'Additional payment recorded from deal form' : 'Initial payment recorded from deal form', recorded_by: profile.id
       });
       if (payErr) throw payErr;
     }
