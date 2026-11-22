@@ -10,17 +10,26 @@ export async function saveDeal(formData: FormData) {
     const { data, error } = parseOrError(dealSchema, formData);
     if (error || !data) throw new Error(error || 'Invalid deal data');
     const supabase = await createClient();
+    const id = blankToNull(formData.get('id'));
+
+    if (!id && profile.role === 'admin') {
+      throw new Error('Admins can manage deal assignments, but new sales deals must be created by the founder or assigned sales representative.');
+    }
+    if (!id && profile.role === 'staff' && data.status !== 'draft') {
+      throw new Error('Sales staff can only create draft deals. The founder approves proposals and pricing.');
+    }
+
     let assignedTo = profile.role === 'staff' ? profile.id : blankToNull(data.assigned_to);
     if (!assignedTo) {
       const { data: prospect } = await supabase.from('prospects').select('assigned_to').eq('id', data.prospect_id).maybeSingle();
       assignedTo = prospect?.assigned_to ?? null;
     }
 
-    const values = {
+    const values: Record<string, unknown> = {
       title: data.title,
       prospect_id: data.prospect_id,
       description: data.description ?? '',
-      deal_value: data.deal_value,
+      deal_value: profile.role === 'staff' && !id ? 0 : data.deal_value,
       currency: data.currency,
       expected_close_date: blankToNull(data.expected_close_date as string),
       assigned_to: assignedTo,
@@ -28,7 +37,12 @@ export async function saveDeal(formData: FormData) {
       won_at: data.status === 'won' ? new Date().toISOString() : null
     };
 
-    const id = blankToNull(formData.get('id'));
+    if (id && profile.role !== 'founder') {
+      delete values.deal_value;
+      delete values.currency;
+      delete values.won_at;
+    }
+
     if (id) {
       const { error: upErr } = await supabase.from('deals').update(values).eq('id', id);
       if (upErr) throw upErr;
