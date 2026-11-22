@@ -138,7 +138,7 @@ export default async function CommissionsPage() {
                             <input type="hidden" name="status" value="approved" />
                             <SubmitButton className="!px-2 !py-1 text-xs">Approve</SubmitButton>
                           </ActionForm>
-                          <form action={updateCommissionStatus}>
+                          <ActionForm action={updateCommissionStatus}>
                             <input type="hidden" name="id" value={entry.id} />
                             <input type="hidden" name="status" value="void" />
                             <SubmitButton variant="ghost" className="!px-2 !py-1 text-xs">Void</SubmitButton>
