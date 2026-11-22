@@ -128,7 +128,7 @@ export function DealDialog({ action, prospects, staff, isFounder, deal }: { acti
           <Input name="deal_value" type="number" min="0" step="0.01" defaultValue={deal ? String(deal.deal_value) : '0'} />
         </Field>
         {isFounder && !edit ? <>
-          <Field label="Amount already paid (₦)" hint="Optional. Creates a successful payment linked to this deal."><Input name="amount_paid" type="number" min="0" step="0.01" defaultValue="0" /></Field>
+          <Field label="Total amount paid so far (₦)" hint="Enter the total received to date. Payments already recorded on this prospect are linked automatically and will not be counted twice."><Input name="amount_paid" type="number" min="0" step="0.01" defaultValue="0" /></Field>
           <Field label="Payment method"><Select name="initial_payment_method" defaultValue="bank_transfer">{opts(PAYMENT_METHODS)}</Select></Field>
           <Field label="Date received"><Input name="initial_paid_at" type="date" defaultValue={today()} /></Field>
         </> : null}
