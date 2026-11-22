@@ -10,6 +10,11 @@ export async function saveProject(formData: FormData) {
     const { data, error } = parseOrError(projectSchema, formData);
     if (error) throw new Error(error);
     const supabase = await createClient();
+    let assignedTo = profile.role === 'staff' ? profile.id : blankToNull(data.assigned_to);
+    if (!assignedTo && data.deal_id) {
+      const { data: deal } = await supabase.from('deals').select('assigned_to').eq('id', data.deal_id).maybeSingle();
+      assignedTo = deal?.assigned_to ?? null;
+    }
 
     const values = {
       project_name: data.project_name,
@@ -20,7 +25,7 @@ export async function saveProject(formData: FormData) {
       currency: data.currency,
       start_date: blankToNull(data.start_date as string),
       due_date: blankToNull(data.due_date as string),
-      assigned_to: blankToNull(data.assigned_to),
+      assigned_to: assignedTo,
       status: data.status,
       completed_at: data.status === 'completed' ? new Date().toISOString() : null
     };
