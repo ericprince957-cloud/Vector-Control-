@@ -15,6 +15,7 @@ const NAV = [
   { href: '/outreach', label: 'Outreach', icon: Send },
   { href: '/deals', label: 'Deals', icon: Handshake },
   { href: '/projects', label: 'Projects', icon: FolderKanban },
+  { href: '/commissions', label: 'Commissions', icon: Wallet },
   { href: '/finance', label: 'Finance', icon: Wallet },
   { href: '/rejections', label: 'Rejections', icon: XCircle },
   { href: '/tasks', label: 'Tasks', icon: CheckSquare },
