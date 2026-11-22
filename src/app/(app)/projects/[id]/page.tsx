@@ -8,7 +8,7 @@ import { Card, CardHeader, Table, TH, TD, Badge, EmptyState, DetailRow, StatCard
 import { PageHeader } from '@/components/page-header';
 import { ActionForm } from '@/components/action-form';
 import { ProjectDialog, TaskDialog } from '@/components/forms';
-import { saveProject } from '@/actions/projects';
+import { deleteProject, saveProject } from '@/actions/projects';
 import { saveTask, updateTaskStatus } from '@/actions/tasks';
 import { assignRecord } from '@/actions/staff';
 import { label, TASK_STATUSES } from '@/lib/constants';
@@ -71,6 +71,7 @@ export default async function ProjectDetail({ params }: { params: Promise<{ id: 
       <PageHeader back={{ href: '/projects', label: 'All projects' }} title={project.project_name} description={project.client_name ? `Client: ${project.client_name}` : undefined}>
         <Badge tone={projectTone[project.status]}>{label(project.status)}</Badge>
         {isFounder ? <ProjectDialog action={saveProject} deals={dealOptions} staff={staff} project={project} /> : null}
+        {isFounder ? <ActionForm action={deleteProject} confirm={{ title: 'Permanently delete this project?', description: 'Tasks will be detached and payment ledger entries retained without a project link. This cannot be undone.', confirmLabel: 'Delete project' }}><input type="hidden" name="id" value={project.id} /><Button type="submit" variant="danger">Delete</Button></ActionForm> : null}
         <TaskDialog action={saveTask} staff={staff} prospects={prospectOptions} projects={[{ id: project.id, name: project.project_name }]} defaultProjectId={project.id} />
       </PageHeader>
 
