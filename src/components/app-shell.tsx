@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   LayoutDashboard, Users, Send, Handshake, FolderKanban, Wallet, Receipt, Percent,
   XCircle, CheckSquare, BarChart3, UsersRound, Settings, ScrollText, Menu, X, LogOut,
-  PanelLeftClose, PanelLeftOpen, Search, Bell, ChevronDown, ShieldCheck
+  PanelLeftClose, PanelLeftOpen, Search, Bell, ChevronDown, ShieldCheck, Sun, Moon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ToastProvider } from './toast';
@@ -226,14 +226,28 @@ export function AppShell({ role, fullName, email, alerts, logout, children }: {
   const [collapsed, setCollapsed] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [query, setQuery] = useState('');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const router = useRouter();
   const pathname = usePathname();
 
   // Restore sidebar preference (per browser) after hydration.
   useEffect(() => {
     try { setCollapsed(localStorage.getItem('vc-sidebar') === 'collapsed'); } catch { /* storage unavailable */ }
+    try {
+      const saved = localStorage.getItem('vc-theme');
+      const next = saved === 'light' ? 'light' : 'dark';
+      setTheme(next);
+      document.documentElement.dataset.theme = next;
+    } catch { document.documentElement.dataset.theme = 'dark'; }
   }, []);
   useEffect(() => { setDrawer(false); }, [pathname]);
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('vc-theme', next); } catch { /* ignore */ }
+  }
 
   function toggle() {
     const next = !collapsed;
@@ -313,6 +327,9 @@ export function AppShell({ role, fullName, email, alerts, logout, children }: {
           </form>
 
           <div className="ml-auto flex items-center gap-1">
+            <button type="button" onClick={toggleTheme} aria-label={"Switch to " + (theme === "dark" ? "light" : "dark") + " mode"} title={"Switch to " + (theme === "dark" ? "light" : "dark") + " mode"} className="flex h-10 w-10 items-center justify-center rounded-[5px] text-muted hover:bg-surface-2 hover:text-text">
+              {theme === "dark" ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
+            </button>
             <NotificationMenu alerts={alerts} />
             <UserMenu fullName={fullName} email={email} role={role} logout={logout} />
           </div>
