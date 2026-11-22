@@ -1,42 +1,35 @@
 'use client';
 
-import { useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { FormDialog } from './form-dialog';
-import { Textarea, Field } from './ui';
+import { Field } from './ui';
 import type { ActionState } from '@/lib/validators';
 
-/** Lets the user paste CSV text or load a .csv file into the textarea before importing. */
 export function CsvImportDialog({ action }: { action: (fd: FormData) => Promise<ActionState> }) {
-  const areaRef = useRef<HTMLTextAreaElement>(null);
-
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !areaRef.current) return;
-    areaRef.current.value = await file.text();
-  }
-
   return (
     <FormDialog
-      title="Import prospects from CSV"
-      description="Header row required. Recognised columns: company name, contact name, industry, phone, email, website, location, source, estimated value."
-      triggerLabel="Import CSV"
+      title="Import prospects"
+      description="Upload a CSV or Excel workbook (.xlsx). The first worksheet must have a header row. Columns are matched by their names, so their order does not matter."
+      triggerLabel="Import CSV / Excel"
       triggerVariant="ghost"
       icon="none"
       action={action}
-      submitLabel="Import"
+      submitLabel="Import prospects"
     >
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="csv-file" className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[5px] border border-line-strong px-4 text-sm hover:border-gold/60 hover:text-gold">
-            <Upload size={15} aria-hidden /> Choose .csv file
+      <div className="space-y-3">
+        <Field label="Choose file *">
+          <label htmlFor="prospect-import-file" className="flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong px-4 py-5 text-center text-sm hover:border-gold/60">
+            <Upload size={20} aria-hidden />
+            <span className="font-medium">Choose CSV or Excel file</span>
+            <span className="text-xs text-muted">.csv or .xlsx · Maximum 10 MB</span>
           </label>
-          <input id="csv-file" type="file" accept=".csv,text/csv" onChange={onFile} className="sr-only" />
-        </div>
-        <Field label="CSV content">
-          <Textarea ref={areaRef} name="csv" required className="min-h-48 font-mono text-xs" placeholder={'company name,contact name,industry,phone,email\nAcme Ltd,John Tech,software,080…,john@acme.com'} />
+          <input id="prospect-import-file" name="file" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required className="sr-only" />
         </Field>
-        <p className="text-[11px] text-muted">Imported rows are added as new prospects. Simple comma-separated values only — wrap nothing in quotes that contains a comma.</p>
+        <div className="rounded-lg bg-surface-2 p-3 text-xs text-muted">
+          <p className="mb-1 font-medium text-foreground">Recognised columns</p>
+          Company Name, Contact Name, Phone, Email, WhatsApp Link, Email Link, Telegram Link, Prefilled Message, Industry, Website, Location, Source, Estimated Value.
+          <p className="mt-2">Header names can use spaces or underscores. Column order does not matter. Rows without a company name are skipped.</p>
+        </div>
       </div>
     </FormDialog>
   );
