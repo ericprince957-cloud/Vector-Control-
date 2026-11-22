@@ -3,6 +3,7 @@ import { requireProfile } from '@/lib/auth';
 import { formatNGN, formatDate } from '@/lib/utils';
 import { Card, Select, Badge } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
+import { ActionForm } from '@/components/action-form';
 import { DealForm } from '@/components/forms';
 import { saveDeal, updateDealStatus, convertDealToProject } from '@/actions/deals';
 import { DEAL_STATUSES, label } from '@/lib/constants';
@@ -49,27 +50,27 @@ export default async function DealsPage() {
                     <p className="mt-1 text-sm text-gold tabular-nums">{formatNGN(d.deal_value)}</p>
                     <p className="text-[11px] text-muted">Close: {formatDate(d.expected_close_date)}{d.won_at ? ` · won ${formatDate(d.won_at)}` : ''}</p>
                     {profile.role === 'founder' ? (
-                      <form action={updateDealStatus} className="mt-2">
+                      <ActionForm action={updateDealStatus} className="mt-2">
                         <input type="hidden" name="id" value={d.id} />
                         <Select name="status" defaultValue={d.status} className="!py-1 text-xs">
                           {DEAL_STATUSES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
                         </Select>
                         <SubmitButton variant="ghost" className="mt-1 w-full !px-2 !py-1 text-xs">Update status</SubmitButton>
-                      </form>
+                      </ActionForm>
                     ) : d.status === 'proposal_sent' ? (
-                      <form action={updateDealStatus} className="mt-2">
+                      <ActionForm action={updateDealStatus} className="mt-2">
                         <input type="hidden" name="id" value={d.id} />
                         <Select name="status" defaultValue="negotiation" className="!py-1 text-xs">
                           <option value="negotiation">Negotiation</option>
                         </Select>
                         <SubmitButton variant="ghost" className="mt-1 w-full !px-2 !py-1 text-xs">Record client response</SubmitButton>
-                      </form>
+                      </ActionForm>
                     ) : <p className="mt-2 text-[11px] text-muted">Founder approval required for stage changes</p>}
                     {d.status === 'won' && profile.role === 'founder' ? (
-                      <form action={convertDealToProject}>
+                      <ActionForm action={convertDealToProject}>
                         <input type="hidden" name="id" value={d.id} />
                         <SubmitButton variant="ghost" className="mt-2 w-full !px-2 !py-1 text-xs">Convert to project</SubmitButton>
-                      </form>
+                      </ActionForm>
                     ) : null}
                   </div>
                 ))}
