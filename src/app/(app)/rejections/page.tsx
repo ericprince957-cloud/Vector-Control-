@@ -19,6 +19,8 @@ export default async function RejectionsPage() {
     supabase.from('deals').select('id, title').order('created_at', { ascending: false })
   ]);
 
+  const prospectOptions = (prospects ?? []).map((p) => ({ id: p.id, name: p.company_name }));
+  const dealOptions = (deals ?? []).map((d) => ({ id: d.id, name: d.title }));
   const list = rejections ?? [];
   const byCategory = list.reduce<Record<string, number>>((acc, r) => ({ ...acc, [r.category]: (acc[r.category] ?? 0) + 1 }), {});
   const lostValue = list.reduce((s, r) => s + Number(r.potential_value ?? 0), 0);
@@ -28,7 +30,7 @@ export default async function RejectionsPage() {
   return (
     <>
       <PageHeader title="Rejections & lost opportunities" description="Records can be created with or without a formal deal. History is preserved — rejections are never deleted." />
-      <RejectionForm action={saveRejection} prospects={prospects ?? []} deals={deals ?? []} />
+      <RejectionForm action={saveRejection} prospects={prospectOptions} deals={dealOptions} />
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Total rejections" value={list.length} />
