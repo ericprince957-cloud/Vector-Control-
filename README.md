@@ -34,7 +34,7 @@ Copy `.env.example` to `.env.local` for local development. Never commit `.env.lo
 - Region: `eu-central-2`
 - Currency: NGN only
 
-The connected live database is the current source of truth. Its schema was established through the Supabase migration history and subsequently hardened with the migration `role_scoped_access_and_finance_view_hardening`.
+The connected live database is the current source of truth. It has the role-scoped access hardening migration `role_scoped_access_and_finance_view_hardening` and the commission ledger migrations `commission_ledger_for_collected_payments` and `restrict_commission_updates_to_approval_fields`.
 
 **Migration drift warning:** The older numbered SQL files `0001_schema.sql` through `0004_security_alignment.sql` do not exactly describe the current live schema/history. Do not blindly replay them against the existing project. Reconcile them into a clean baseline before using them to provision a fresh production database.
 
@@ -56,7 +56,7 @@ The connected live database is the current source of truth. Its schema was estab
 - Financial views use `security_invoker = true` so underlying table policies are enforced.
 - Anonymous access to business tables and financial views is revoked.
 
-## Financial rules
+## Financial and commission rules
 
 1. A won deal is not revenue.
 2. Revenue is successful payment transactions minus successful refunds.
@@ -65,6 +65,11 @@ The connected live database is the current source of truth. Its schema was estab
 5. Net operating result = net revenue − expenses.
 6. Outstanding balance = won deal value − net successful payments for that deal, minimum zero.
 7. All business amounts are NGN.
+8. Sales commission is 10% of eligible successful client payments actually received, not deal value or unpaid invoices.
+9. Successful refunds create negative commission adjustments.
+10. Commission entries are generated from the sales representative assigned to the deal when the payment is recorded.
+11. Only the founder can approve, void or mark commission entries as paid.
+12. Successful payment records are immutable; record refunds as separate refund transactions.
 
 ## Soft-delete and audit policy
 
@@ -80,6 +85,7 @@ The connected live database is the current source of truth. Its schema was estab
 - Prospects and outreach history
 - Deals and sales pipeline
 - Projects and delivery tracking
+- Commission ledger (staff can view their own; founder controls approval and payout)
 - Finance (founder/admin only)
 - Rejections
 - Tasks
