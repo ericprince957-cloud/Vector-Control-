@@ -5,14 +5,14 @@ import {
   CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell
 } from 'recharts';
 
-const GOLD = '#d4af37';
-const GRID = '#262626';
-const TEXT = '#9a9a9a';
+const GOLD = 'var(--color-gold)';
+const GRID = 'var(--color-line)';
+const TEXT = 'var(--color-muted)';
 const SERIES = ['#d4af37', '#7dd3fc', '#34d399', '#fbbf24', '#f87171', '#a1a1aa', '#8a7420', '#4b5563'];
 
 const axis = { stroke: TEXT, fontSize: 11 };
-const tooltipStyle = { backgroundColor: '#161616', border: '1px solid #343434', borderRadius: 6, fontSize: 12 };
-const tooltipLabel = { color: '#ffffff' };
+const tooltipStyle = { backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-line-strong)', borderRadius: 12, fontSize: 12, color: 'var(--color-text)' };
+const tooltipLabel = { color: 'var(--color-text)' };
 
 function naira(v: number) {
   return '₦' + Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
@@ -63,7 +63,7 @@ export function DonutChart({ data, height = 240 }: { data: { name: string; value
   return (
     <ResponsiveContainer width="100%" height={height}>
       <PieChart>
-        <Pie data={filtered} dataKey="value" nameKey="name" innerRadius={52} outerRadius={84} paddingAngle={2} stroke="#0a0a0a">
+        <Pie data={filtered} dataKey="value" nameKey="name" innerRadius={52} outerRadius={84} paddingAngle={2} stroke="var(--color-surface)">
           {filtered.map((_, i) => <Cell key={i} fill={SERIES[i % SERIES.length]} />)}
         </Pie>
         <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabel} itemStyle={{ color: '#fff' }} />
