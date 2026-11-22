@@ -15,7 +15,7 @@ const tone: Record<string, 'neutral' | 'gold' | 'green' | 'red' | 'blue' | 'ambe
 };
 
 export default async function ProjectsPage() {
-  await requireProfile();
+  const profile = await requireProfile();
   const supabase = await createClient();
 
   const [{ data: projects }, { data: deals }, { data: staffList }] = await Promise.all([
@@ -32,7 +32,7 @@ export default async function ProjectsPage() {
   return (
     <>
       <PageHeader title="Projects" description={`${list.length} total · ${overdue.length} overdue · ${list.filter((p) => p.status === 'completed').length} completed`} />
-      <ProjectForm action={saveProject} deals={deals ?? []} staff={staff} />
+      {profile.role === 'founder' ? <ProjectForm action={saveProject} deals={deals ?? []} staff={staff} /> : null}
 
       <Card>
         {!list.length ? <EmptyState title="No projects yet" hint="Convert a won deal or create a project manually." /> : (
