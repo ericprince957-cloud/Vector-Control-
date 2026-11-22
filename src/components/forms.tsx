@@ -52,7 +52,7 @@ export function OutreachForm({ action, prospects }: { action: (fd: FormData) => 
   );
 }
 
-export function DealForm({ action, prospects, staff }: { action: (fd: FormData) => Promise<{ ok: boolean; message: string }>; prospects: Opt[]; staff: Opt[] }) {
+export function DealForm({ action, prospects, staff, role }: { action: (fd: FormData) => Promise<{ ok: boolean; message: string }>; prospects: Opt[]; staff: Opt[]; role: string }) {
   return (
     <CollapsibleForm title="Create deal" action={action}>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -62,7 +62,7 @@ export function DealForm({ action, prospects, staff }: { action: (fd: FormData) 
         <Field label="Currency"><Select name="currency" defaultValue="NGN"><option value="NGN">NGN</option></Select></Field>
         <Field label="Expected close date"><Input name="expected_close_date" type="date" /></Field>
         <Field label="Assigned staff"><Select name="assigned_to"><option value="">— Unassigned —</option>{people(staff)}</Select></Field>
-        <Field label="Status"><Select name="status" defaultValue="draft">{opts(DEAL_STATUSES)}</Select></Field>
+        <Field label="Status"><Select name="status" defaultValue="draft">{opts(role === 'founder' ? DEAL_STATUSES : ['draft'])}</Select></Field>
         <div className="sm:col-span-2 lg:col-span-3"><Field label="Description"><Textarea name="description" /></Field></div>
       </div>
     </CollapsibleForm>
