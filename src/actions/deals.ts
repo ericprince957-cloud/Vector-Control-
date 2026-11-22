@@ -26,6 +26,9 @@ export async function saveDeal(formData: FormData) {
       assignedTo = prospect?.assigned_to ?? null;
     }
 
+    const amountPaid = Number(formData.get('amount_paid') ?? 0);
+    if (amountPaid > Number(data.deal_value)) throw new Error('Amount paid cannot exceed the deal value.');
+
     const values: TablesUpdate<'deals'> = {
       title: data.title,
       prospect_id: data.prospect_id,
@@ -47,7 +50,16 @@ export async function saveDeal(formData: FormData) {
     if (id) {
       const { error: upErr } = await supabase.from('deals').update(values).eq('id', id);
       if (upErr) throw upErr;
+      if (amountPaid > 0) {
+        const { error: payErr } = await supabase.from('payments').insert({
+          deal_id: id, prospect_id: data.prospect_id, client_name: data.title, amount: amountPaid, currency: data.currency,
+          status: 'successful', payment_method: 'bank_transfer', paid_at: new Date().toISOString().slice(0, 10),
+          transaction_type: 'payment', notes: 'Payment recorded from deal form', recorded_by: profile.id
+        });
+        if (payErr) throw payErr;
+      }
       revalidatePath('/deals');
+      revalidatePath('/finance');
       return withAuditWarning('Deal updated', await audit('update', 'deal', id, { status: data.status }));
     }
 
@@ -57,7 +69,16 @@ export async function saveDeal(formData: FormData) {
       .select('id')
       .single();
     if (inErr) throw inErr;
+    if (amountPaid > 0) {
+      const { error: payErr } = await supabase.from('payments').insert({
+        deal_id: created.id, prospect_id: data.prospect_id, client_name: data.title, amount: amountPaid, currency: data.currency,
+        status: 'successful', payment_method: 'bank_transfer', paid_at: new Date().toISOString().slice(0, 10),
+        transaction_type: 'payment', notes: 'Initial payment recorded from deal form', recorded_by: profile.id
+      });
+      if (payErr) throw payErr;
+    }
     revalidatePath('/deals');
+    revalidatePath('/finance');
     return withAuditWarning('Deal created', await audit('create', 'deal', created.id, { title: data.title }));
   });
 }
@@ -111,5 +132,20 @@ export async function convertDealToProject(formData: FormData) {
     revalidatePath('/projects');
     revalidatePath('/deals');
     return withAuditWarning('Project created from deal', await audit('convert', 'deal', dealId, { project_id: project.id }));
+  });
+}
+
+export async function deleteDeal(formData: FormData) {
+  return runAction(async (profile) => {
+    if (profile.role !== 'founder') throw new Error('Only the founder can permanently delete deals.');
+    const id = String(formData.get('id') ?? '');
+    if (!id) throw new Error('Deal ID is required');
+    const supabase = await createClient();
+    const { error } = await supabase.from('deals').delete().eq('id', id);
+    if (error) throw error;
+    revalidatePath('/deals');
+    revalidatePath('/projects');
+    revalidatePath('/finance');
+    return withAuditWarning('Deal deleted', await audit('delete', 'deal', id));
   });
 }
