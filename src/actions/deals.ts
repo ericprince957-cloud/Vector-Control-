@@ -53,7 +53,7 @@ export async function saveDeal(formData: FormData) {
       if (amountPaid > 0) {
         const { error: payErr } = await supabase.from('payments').insert({
           deal_id: id, prospect_id: data.prospect_id, client_name: data.title, amount: amountPaid, currency: data.currency,
-          status: 'successful', payment_method: 'bank_transfer', paid_at: new Date().toISOString().slice(0, 10),
+          status: 'successful', payment_method: data.initial_payment_method, paid_at: data.initial_paid_at || new Date().toISOString().slice(0, 10),
           transaction_type: 'payment', notes: 'Payment recorded from deal form', recorded_by: profile.id
         });
         if (payErr) throw payErr;
