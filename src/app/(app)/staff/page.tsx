@@ -66,7 +66,7 @@ export default async function StaffPage() {
                 <TD className="text-xs">{formatDate(l.created_at)}</TD>
                 <TD className="text-xs">{l.actor?.full_name ?? '—'}</TD>
                 <TD className="capitalize">{l.action}</TD>
-                <TD className="capitalize text-muted">{l.entity}</TD>
+                <TD className="capitalize text-muted">{l.entity_type}</TD>
                 <TD className="max-w-xs truncate text-xs text-muted">{JSON.stringify(l.details)}</TD>
               </tr>
             ))}
