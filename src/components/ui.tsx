@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 /* ───────────────────────────── Surfaces ───────────────────────────── */
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-[6px] border border-line bg-surface', className)} {...props} />;
+  return <div className={cn('rounded-2xl border border-line bg-surface shadow-sm', className)} {...props} />;
 }
 
 export function CardHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
@@ -195,9 +195,9 @@ export function Notice({ tone = 'neutral', children }: { tone?: 'neutral' | 'war
 
 export function StatCard({ label: statLabel, value, tone, hint }: { label: string; value: string | number; tone?: 'gold' | 'green' | 'red'; hint?: string }) {
   return (
-    <Card className="p-4">
+    <Card className="rounded-2xl p-5">
       <p className="text-[11px] font-medium uppercase tracking-wider text-muted">{statLabel}</p>
-      <p className={cn('mt-1.5 truncate text-xl font-semibold tabular-nums', tone === 'gold' && 'text-gold', tone === 'green' && 'text-success', tone === 'red' && 'text-danger')}>
+      <p className={cn('mt-1.5 truncate text-2xl font-semibold tracking-tight tabular-nums', tone === 'gold' && 'text-gold', tone === 'green' && 'text-success', tone === 'red' && 'text-danger')}>
         {value}
       </p>
       {hint ? <p className="mt-1 text-[11px] text-muted/80">{hint}</p> : null}
