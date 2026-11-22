@@ -60,7 +60,7 @@ export async function saveProspect(formData: FormData) {
     if (amountPaid > 0) {
       const { error: payErr } = await supabase.from('payments').insert({
         prospect_id: created.id, client_name: data.company_name, amount: amountPaid, currency: data.currency,
-        status: 'successful', payment_method: 'bank_transfer', paid_at: new Date().toISOString().slice(0, 10),
+        status: 'successful', payment_method: data.initial_payment_method, paid_at: data.initial_paid_at || new Date().toISOString().slice(0, 10),
         transaction_type: 'payment', notes: 'Initial payment recorded from prospect form', recorded_by: profile.id
       });
       if (payErr) throw payErr;
