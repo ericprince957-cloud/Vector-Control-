@@ -4,6 +4,7 @@ import { requireProfile } from '@/lib/auth';
 import { formatNGN, formatDate } from '@/lib/utils';
 import { Card, Table, TH, TD, EmptyState, Badge, Input, Select, Button, Textarea } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
+import { ActionForm } from '@/components/action-form';
 import { ProspectForm } from '@/components/forms';
 import { saveProspect, importProspectsCSV } from '@/actions/prospects';
 import { PROSPECT_STATUSES, label } from '@/lib/constants';
@@ -92,10 +93,10 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
         <Card className="p-5">
           <h3 className="mb-2 text-sm font-semibold">Import prospects from CSV</h3>
           <p className="mb-3 text-xs text-muted">Headers: company name, contact name, industry, phone, email, website, location, source, estimated value</p>
-          <form action={importProspectsCSV} className="space-y-3">
+          <ActionForm action={importProspectsCSV} className="space-y-3">
             <Textarea name="csv" placeholder={'company name,contact name,industry,phone,email\nAcme Ltd,John Tech,software,080…,john@acme.com'} className="font-mono text-xs" />
             <Button type="submit" variant="ghost">Import CSV</Button>
-          </form>
+          </ActionForm>
         </Card>
         <Card className="p-5">
           <h3 className="mb-2 text-sm font-semibold">Export</h3>
