@@ -13,7 +13,7 @@ import { archiveProspect, deleteProspect, saveProspect } from '@/actions/prospec
 import { saveOutreach } from '@/actions/outreach';
 import { saveTask } from '@/actions/tasks';
 import { assignRecord } from '@/actions/staff';
-import { one, prospectTone, dealTone, taskTone, priorityTone } from '@/lib/ui-helpers';
+import { one, prospectTone, dealTone, taskTone, priorityTone, netAmount } from '@/lib/ui-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,19 +42,23 @@ export default async function ProspectDetail({ params, searchParams }: { params:
     .maybeSingle();
   if (!prospect) notFound();
 
-  const [outreachRes, dealsRes, tasksRes, rejectionsRes, staffRes, projectsRes] = await Promise.all([
+  const [outreachRes, dealsRes, tasksRes, rejectionsRes, staffRes, projectsRes, paymentsRes] = await Promise.all([
     supabase.from('outreach_activities').select('*, creator:profiles!outreach_activities_created_by_fkey(full_name)').eq('prospect_id', id).order('contacted_at', { ascending: false }),
     supabase.from('deals').select('*').eq('prospect_id', id).order('created_at', { ascending: false }),
     supabase.from('tasks').select('*, assignee:profiles!tasks_assigned_to_fkey(full_name)').eq('prospect_id', id).order('created_at', { ascending: false }),
     supabase.from('rejections').select('*').eq('prospect_id', id).order('rejected_at', { ascending: false }),
     supabase.from('profiles').select('id, full_name, email').eq('is_active', true),
-    supabase.from('projects').select('id, project_name').order('created_at', { ascending: false })
+    supabase.from('projects').select('id, project_name').order('created_at', { ascending: false }),
+    !isStaff ? supabase.from('payments').select('id, amount, status, transaction_type, paid_at').eq('prospect_id', id).order('paid_at', { ascending: false }) : Promise.resolve({ data: null })
   ]);
 
   const outreach = outreachRes.data ?? [];
   const deals = dealsRes.data ?? [];
   const tasks = tasksRes.data ?? [];
   const rejections = rejectionsRes.data ?? [];
+  const prospectPayments = (paymentsRes.data ?? []) as { id: string; amount: number; status: string; transaction_type: string; paid_at: string }[];
+  const received = prospectPayments.reduce((sum, payment) => sum + netAmount(payment), 0);
+  const outstanding = Math.max(0, Number(prospect.estimated_value) - received);
   const staff = (staffRes.data ?? []).map((s) => ({ id: s.id, name: s.full_name || s.email }));
   const projectOptions = (projectsRes.data ?? []).map((p) => ({ id: p.id, name: p.project_name }));
   const thisProspect = [{ id: prospect.id, name: prospect.company_name }];
@@ -125,7 +129,9 @@ export default async function ProspectDetail({ params, searchParams }: { params:
               <DetailRow label="Location">{prospect.location || '—'}</DetailRow>
               <DetailRow label="Industry">{prospect.industry || '—'}</DetailRow>
               <DetailRow label="Source">{prospect.source || '—'}</DetailRow>
-              <DetailRow label="Estimated value">{formatNGN(prospect.estimated_value)}</DetailRow>
+              <DetailRow label="Agreed / estimated value">{formatNGN(prospect.estimated_value)}</DetailRow>
+              {!isStaff ? <DetailRow label="Received">{formatNGN(received)}</DetailRow> : null}
+              {!isStaff ? <DetailRow label="Outstanding">{formatNGN(outstanding)}</DetailRow> : null>
               <DetailRow label="Next follow-up">{formatDate(prospect.next_follow_up_at)}</DetailRow>
               <DetailRow label="Added">{formatDate(prospect.created_at)}</DetailRow>
             </dl>
