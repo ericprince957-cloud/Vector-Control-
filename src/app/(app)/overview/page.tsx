@@ -110,12 +110,12 @@ export default async function OverviewPage() {
 
   return (
     <>
-      <PageHeader title={`Welcome back, ${profile.full_name?.split(' ')[0] || 'there'}`} description="A live view of sales, delivery and finance across Vector Codes." />
+      <PageHeader title="Dashboard" description="A live view of sales, delivery and finance across Vector Codes." />
 
       {loadError ? <div className="mb-6"><ErrorState title="Some figures could not be loaded" message={loadError.message} /></div> : null}
 
       {canViewFinance ? (
-        <section aria-label="Financial position" className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+        <section aria-label="Financial position" className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
           <StatCard label="Total revenue" value={formatNGN(bookedRevenue)} hint="Value of won deals" />
           <StatCard label="Revenue received" value={formatNGN(fin?.total_net_revenue ?? 0)} tone="green" hint="Successful payments, net of refunds" />
           <StatCard label="Outstanding" value={formatNGN(fin?.outstanding_balance ?? 0)} tone="gold" hint="Owed by clients" />
@@ -132,7 +132,7 @@ export default async function OverviewPage() {
         <StatCard label="Pending tasks" value={openTasks.length} tone={overdueTasks.length ? 'red' : undefined} hint={overdueTasks.length ? `${overdueTasks.length} overdue` : undefined} />
       </section>
 
-      <div className="mb-4 grid gap-4 lg:grid-cols-3">
+      <div className="mb-5 grid gap-5 lg:grid-cols-3">
         {canViewFinance ? (
           <Card className="lg:col-span-2">
             <CardHeader title="Revenue analytics" subtitle="Last 6 months · revenue counts successful payments only" />
@@ -209,7 +209,7 @@ export default async function OverviewPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3">
         {canViewFinance ? (
           <Card>
             <CardHeader title="Recent transactions" action={<Link href="/finance" className="text-xs text-gold hover:text-gold-light">View all</Link>} />
