@@ -8,7 +8,11 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}/overview`);
+    if (!error) {
+      const next = searchParams.get('next');
+      const destination = next && next.startsWith('/') && !next.startsWith('//') ? next : '/overview';
+      return NextResponse.redirect(new URL(destination, origin));
+    }
   }
   return NextResponse.redirect(`${origin}/login?error=Could not complete authentication`);
 }
