@@ -1,11 +1,12 @@
 import type { CookieOptions } from '@supabase/ssr';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import type { Database } from '@/lib/database.types';
 
 export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
@@ -17,7 +18,7 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // called from a Server Component — middleware refreshes sessions
+            // Called from a Server Component — middleware refreshes sessions.
           }
         }
       }
@@ -27,15 +28,18 @@ export async function createClient() {
 
 /**
  * Server-only administrative client. Uses the service-role key and bypasses RLS.
- * May ONLY be used inside server actions after the caller's identity and
- * permissions have been verified (see src/lib/auth.ts and src/actions/staff.ts).
+ * Use only in server actions after verifying the caller's identity and permissions.
  */
 export async function createAdminClient() {
   const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
   if (!url || !serviceKey) {
     throw new Error('Server not configured: SUPABASE_SERVICE_ROLE_KEY is missing');
   }
-  return createSupabaseClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+
+  return createSupabaseClient<Database>(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
 }
