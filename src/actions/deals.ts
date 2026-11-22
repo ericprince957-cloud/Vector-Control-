@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import type { TablesUpdate } from '@/lib/database.types';
 import { dealSchema, parseOrError } from '@/lib/validators';
 import { runAction, audit, blankToNull, withAuditWarning } from './helpers';
 
@@ -25,7 +26,7 @@ export async function saveDeal(formData: FormData) {
       assignedTo = prospect?.assigned_to ?? null;
     }
 
-    const values: Record<string, unknown> = {
+    const values: TablesUpdate<'deals'> = {
       title: data.title,
       prospect_id: data.prospect_id,
       description: data.description ?? '',
