@@ -26,6 +26,7 @@ export default async function OutreachPage({ searchParams }: { searchParams: Pro
   ]);
 
   const staff = (staffList ?? []).map((s) => ({ id: s.id, name: s.full_name || s.email }));
+  const prospectOptions = (prospects ?? []).map((p) => ({ id: p.id, name: p.company_name }));
   const list = records ?? [];
   const noResponse = list.filter((r) => r.outcome === 'no_response').length;
   const followUp = list.filter((r) => r.outcome === 'follow_up_required').length;
@@ -33,7 +34,7 @@ export default async function OutreachPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title="Outreach" description={`${list.length} records · ${noResponse} without response · ${followUp} need follow-up`} />
-      <OutreachForm action={saveOutreach} prospects={prospects ?? []} />
+      <OutreachForm action={saveOutreach} prospects={prospectOptions} />
 
       <Card className="mb-4 p-4">
         <form className="grid gap-3 sm:grid-cols-4">
