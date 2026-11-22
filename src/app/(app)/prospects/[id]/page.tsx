@@ -9,7 +9,7 @@ import { PageHeader } from '@/components/page-header';
 import { ActionForm } from '@/components/action-form';
 import { ProspectDialog, OutreachDialog, TaskDialog } from '@/components/forms';
 import { label } from '@/lib/constants';
-import { archiveProspect, saveProspect } from '@/actions/prospects';
+import { archiveProspect, deleteProspect, saveProspect } from '@/actions/prospects';
 import { saveOutreach } from '@/actions/outreach';
 import { saveTask } from '@/actions/tasks';
 import { assignRecord } from '@/actions/staff';
@@ -90,6 +90,12 @@ export default async function ProspectDetail({ params, searchParams }: { params:
         <ProspectDialog action={saveProspect} staff={staff} canAssign={!isStaff} prospect={prospect} />
         <OutreachDialog action={saveOutreach} prospects={thisProspect} defaultProspectId={prospect.id} />
         <TaskDialog action={saveTask} staff={staff} prospects={thisProspect} projects={projectOptions} defaultProspectId={prospect.id} />
+        {profile.role === 'founder' ? (
+          <ActionForm action={deleteProspect} confirm={{ title: 'Permanently delete this prospect?', description: 'This removes the prospect record. Linked outreach history will be removed; payment ledger entries remain but are detached. This cannot be undone.', confirmLabel: 'Delete prospect' }}>
+            <input type="hidden" name="id" value={prospect.id} />
+            <Button type="submit" variant="danger">Delete</Button>
+          </ActionForm>
+        ) : null}
         {!archived ? (
           <ActionForm
             action={archiveProspect}
