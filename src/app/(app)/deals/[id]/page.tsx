@@ -9,7 +9,7 @@ import { PageHeader } from '@/components/page-header';
 import { ActionForm } from '@/components/action-form';
 import { DealDialog } from '@/components/forms';
 import { DealStageControl } from '@/components/deal-controls';
-import { saveDeal, updateDealStatus, convertDealToProject } from '@/actions/deals';
+import { deleteDeal, saveDeal, updateDealStatus, convertDealToProject } from '@/actions/deals';
 import { label } from '@/lib/constants';
 import { dealTone, paymentTone, projectTone, taskTone, one, netAmount } from '@/lib/ui-helpers';
 
@@ -66,6 +66,7 @@ export default async function DealDetail({ params }: { params: Promise<{ id: str
       >
         <Badge tone={dealTone[deal.status]}>{label(deal.status)}</Badge>
         <DealDialog action={saveDeal} prospects={prospectOptions} staff={staff} isFounder={isFounder} deal={deal} />
+        {isFounder ? <ActionForm action={deleteDeal} confirm={{ title: 'Permanently delete this deal?', description: 'Linked project references and payment ledger links will be detached. Financial transactions remain in the ledger. This cannot be undone.', confirmLabel: 'Delete deal' }}><input type="hidden" name="id" value={deal.id} /><Button type="submit" variant="danger">Delete</Button></ActionForm> : null}
         {deal.status === 'won' && isFounder && projects.length === 0 ? (
           <ActionForm
             action={convertDealToProject}
