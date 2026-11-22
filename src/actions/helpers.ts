@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient } from '@/lib/supabase/server';
 import { requireProfile } from '@/lib/auth';
 import type { ActionState } from '@/lib/validators';
