@@ -46,7 +46,7 @@ export default async function ProjectDetail({ params }: { params: Promise<{ id: 
     !isStaff ? supabase.from('payments').select('id, amount, status, transaction_type, paid_at').eq('project_id', id).order('paid_at', { ascending: false }) : empty,
     supabase.from('audit_logs').select('id, action, created_at, actor:profiles!audit_logs_actor_id_fkey(full_name)').eq('entity_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('profiles').select('id, full_name, email').eq('is_active', true),
-    isFounder ? supabase.from('deals').select('id, title').eq('status', 'won') : empty,
+    !isStaff ? supabase.from('deals').select('id, title').eq('status', 'won') : empty,
     supabase.from('prospects').select('id, company_name').order('company_name')
   ]);
 
@@ -70,7 +70,7 @@ export default async function ProjectDetail({ params }: { params: Promise<{ id: 
     <>
       <PageHeader back={{ href: '/projects', label: 'All projects' }} title={project.project_name} description={project.client_name ? `Client: ${project.client_name}` : undefined}>
         <Badge tone={projectTone[project.status]}>{label(project.status)}</Badge>
-        {isFounder ? <ProjectDialog action={saveProject} deals={dealOptions} staff={staff} project={project} /> : null}
+        {!isStaff ? <ProjectDialog action={saveProject} deals={dealOptions} staff={staff} project={project} isFounder={isFounder} /> : null}
         {isFounder ? <ActionForm action={deleteProject} confirm={{ title: 'Permanently delete this project?', description: 'Tasks will be detached and payment ledger entries retained without a project link. This cannot be undone.', confirmLabel: 'Delete project' }}><input type="hidden" name="id" value={project.id} /><Button type="submit" variant="danger">Delete</Button></ActionForm> : null}
         <TaskDialog action={saveTask} staff={staff} prospects={prospectOptions} projects={[{ id: project.id, name: project.project_name }]} defaultProjectId={project.id} />
       </PageHeader>

@@ -64,7 +64,7 @@ export const projectSchema = z.object({
   start_date: nullableDate,
   due_date: nullableDate,
   assigned_to: z.string().uuid().optional().nullable().or(z.literal('')),
-  status: z.enum(['not_started','in_progress','under_review','completed','on_hold','cancelled']).default('not_started')
+  status: z.enum(['not_started','in_progress','review','under_review','completed','on_hold','cancelled']).default('not_started')
 });
 
 export const paymentSchema = z.object({

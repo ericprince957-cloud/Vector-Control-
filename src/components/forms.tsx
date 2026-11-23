@@ -28,6 +28,8 @@ const grid = 'grid gap-4 sm:grid-cols-2';
  * either would always fail, so they are not offered here. See delivery notes.
  */
 const SAFE_PROJECT_STATUSES = PROJECT_STATUSES.filter((s) => s !== 'under_review');
+/** Status choices that match the live database ('review' is stored; shown as “Under review”). */
+const PROJECT_STATUS_CHOICES = [...SAFE_PROJECT_STATUSES.slice(0, 2), 'review', ...SAFE_PROJECT_STATUSES.slice(2)];
 const SAFE_REJECTION_CATEGORIES = REJECTION_CATEGORIES.filter((c) => c !== 'postponed');
 
 /* ───────────────────────────── Prospects ───────────────────────────── */
@@ -153,12 +155,13 @@ export function DealDialog({ action, prospects, staff, isFounder, deal }: { acti
 
 type ProjectRow = { id: string; project_name: string; client_name: string | null; deal_id: string | null; description: string | null; contract_value: number | string; start_date: string | null; due_date: string | null; assigned_to: string | null; status: string };
 
-export function ProjectDialog({ action, deals, staff, project }: { action: Action; deals: Opt[]; staff: Opt[]; project?: ProjectRow }) {
+export function ProjectDialog({ action, deals, staff, project, isFounder = true }: { action: Action; deals: Opt[]; staff: Opt[]; project?: ProjectRow; isFounder?: boolean }) {
   const edit = Boolean(project);
+  const dealChoices = project?.deal_id && !deals.some((d) => d.id === project.deal_id) ? [...deals, { id: project.deal_id, name: 'Linked deal' }] : deals;
   return (
     <FormDialog
       title={edit ? 'Edit project' : 'Create project'}
-      description="Founder-only. Contract terms are protected by backend approval rules."
+      description={isFounder ? 'Update details, status, dates or the team any time.' : 'You can update details, dates, team and status. Contract value and closing or cancelling a project are founder-only.'}
       triggerLabel={edit ? 'Edit' : 'Create project'}
       triggerVariant={edit ? 'ghost' : 'primary'}
       icon={edit ? 'edit' : 'plus'}
@@ -170,12 +173,12 @@ export function ProjectDialog({ action, deals, staff, project }: { action: Actio
       <div className={grid}>
         <Field label="Project name *"><Input name="project_name" required defaultValue={project?.project_name} /></Field>
         <Field label="Client"><Input name="client_name" defaultValue={project?.client_name ?? ''} /></Field>
-        <Field label="Related won deal"><Select name="deal_id" defaultValue={project?.deal_id ?? ''}><option value="">None</option>{people(deals)}</Select></Field>
-        <Field label="Contract value (₦)"><Input name="contract_value" type="number" min="0" step="0.01" defaultValue={project ? String(project.contract_value) : '0'} /></Field>
+        <Field label="Related won deal"><Select name="deal_id" defaultValue={project?.deal_id ?? ''}><option value="">None</option>{people(dealChoices)}</Select></Field>
+        <Field label="Contract value (₦)" hint={isFounder ? undefined : 'Only the founder can change this.'}><Input name="contract_value" type="number" min="0" step="0.01" readOnly={!isFounder} defaultValue={project ? String(project.contract_value) : '0'} /></Field>
         <Field label="Start date"><Input name="start_date" type="date" defaultValue={day(project?.start_date)} /></Field>
         <Field label="Due date"><Input name="due_date" type="date" defaultValue={day(project?.due_date)} /></Field>
         <Field label="Assigned to"><Select name="assigned_to" defaultValue={project?.assigned_to ?? ''}><option value="">Unassigned</option>{people(staff)}</Select></Field>
-        <Field label="Status"><Select name="status" defaultValue={project?.status === 'review' ? 'in_progress' : (project?.status ?? 'not_started')}>{opts(SAFE_PROJECT_STATUSES)}</Select></Field>
+        <Field label="Status"><Select name="status" defaultValue={project?.status ?? 'not_started'}>{PROJECT_STATUS_CHOICES.map((st) => <option key={st} value={st}>{st === 'review' ? 'Under review' : label(st)}</option>)}</Select></Field>
         <Field label="Description" className="sm:col-span-2"><Textarea name="description" defaultValue={project?.description ?? ''} /></Field>
       </div>
     </FormDialog>

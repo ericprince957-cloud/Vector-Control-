@@ -8,7 +8,8 @@ import { PageHeader } from '@/components/page-header';
 import { FilterBar } from '@/components/filter-bar';
 import { Pagination } from '@/components/pagination';
 import { ProjectDialog } from '@/components/forms';
-import { saveProject } from '@/actions/projects';
+import { ProjectStatusSelect } from '@/components/project-status-select';
+import { saveProject, updateProjectStatus } from '@/actions/projects';
 import { PROJECT_STATUSES, label } from '@/lib/constants';
 import { PAGE_SIZE, pageParam, rangeFor, safeSearch, one, projectTone } from '@/lib/ui-helpers';
 
@@ -30,7 +31,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
 
   let query = supabase
     .from('projects')
-    .select('id, project_name, client_name, status, contract_value, due_date, start_date, assigned_to, assigned:profiles!projects_assigned_to_fkey(full_name)', { count: 'exact' })
+    .select('id, project_name, client_name, status, contract_value, due_date, start_date, assigned_to, deal_id, description, assigned:profiles!projects_assigned_to_fkey(full_name)', { count: 'exact' })
     .order('due_date', { ascending: true, nullsFirst: false });
   if (q) query = query.or(`project_name.ilike.%${q}%,client_name.ilike.%${q}%`);
   if (sp.status) query = query.eq('status', sp.status);
@@ -88,8 +89,8 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
           <EmptyState title="No projects found" hint={isFounder ? 'Convert a won deal on the Deals page, or create a project here.' : 'Projects assigned to you will appear here.'} />
         ) : (
           <>
-            <Table minWidth={860}>
-              <thead><tr><TH>Project</TH><TH>Client</TH><TH>Status</TH><TH>Progress</TH>{!isStaff ? <TH>Value</TH> : null}<TH>Team</TH><TH>Due</TH></tr></thead>
+            <Table minWidth={1000}>
+              <thead><tr><TH>Project</TH><TH>Client</TH><TH>Status</TH><TH>Progress</TH>{!isStaff ? <TH>Value</TH> : null}<TH>Team</TH><TH>Due</TH>{!isStaff ? <TH><span className="sr-only">Edit</span></TH> : null}</tr></thead>
               <tbody>
                 {rows.map((p) => {
                   const isOverdue = !['completed', 'cancelled'].includes(p.status) && p.due_date && p.due_date < today;
@@ -98,7 +99,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                     <tr key={p.id} className="hover:bg-surface-2/60">
                       <TD><Link href={`/projects/${p.id}`} className="font-medium hover:text-gold">{p.project_name}</Link></TD>
                       <TD>{p.client_name || '—'}</TD>
-                      <TD><Badge tone={projectTone[p.status]}>{label(p.status)}</Badge></TD>
+                      <TD>{isStaff ? <Badge tone={projectTone[p.status]}>{label(p.status)}</Badge> : <ProjectStatusSelect projectId={p.id} status={p.status} action={updateProjectStatus} canClose={isFounder} />}</TD>
                       <TD>
                         {prog ? (
                           <div className="flex items-center gap-2">
@@ -110,6 +111,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                       {!isStaff ? <TD className="tabular-nums">{formatNGN(p.contract_value)}</TD> : null}
                       <TD className="text-xs text-muted">{one(p.assigned as { full_name: string } | { full_name: string }[] | null)?.full_name ?? 'Unassigned'}</TD>
                       <TD className={`whitespace-nowrap text-xs ${isOverdue ? 'text-danger' : ''}`}>{formatDate(p.due_date)}{isOverdue ? ' · overdue' : ''}</TD>
+                      {!isStaff ? <TD><ProjectDialog action={saveProject} deals={dealOptions} staff={staff} project={p} isFounder={isFounder} /></TD> : null}
                     </tr>
                   );
                 })}

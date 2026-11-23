@@ -78,3 +78,29 @@ export async function deleteProject(formData: FormData) {
     return withAuditWarning('Project deleted', await audit('delete', 'project', id));
   });
 }
+
+const PROJECT_STATUS_VALUES = ['not_started', 'in_progress', 'review', 'completed', 'on_hold', 'cancelled'];
+
+/** Quick status change from the list. Closing or cancelling a project is founder-only (also enforced in the database). */
+export async function updateProjectStatus(formData: FormData) {
+  return runAction(async (profile) => {
+    const id = String(formData.get('id') ?? '').trim();
+    const status = String(formData.get('status') ?? '').trim();
+    if (!id) throw new Error('Project is missing');
+    if (!PROJECT_STATUS_VALUES.includes(status)) throw new Error('Invalid status');
+    if (profile.role === 'staff') throw new Error('Project records are managed by the founder and admins.');
+    if (profile.role !== 'founder' && (status === 'completed' || status === 'cancelled')) {
+      throw new Error('Only the founder can complete or cancel a project.');
+    }
+    const supabase = await createClient();
+    const patch: TablesUpdate<'projects'> = { status: status as TablesUpdate<'projects'>['status'] };
+    if (profile.role === 'founder') patch.completed_at = status === 'completed' ? new Date().toISOString() : null;
+    const { data, error } = await supabase.from('projects').update(patch).eq('id', id).select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('Could not update this project');
+    revalidatePath('/projects');
+    revalidatePath(`/projects/${id}`);
+    revalidatePath('/overview');
+    return withAuditWarning(`Status set to ${status === 'review' ? 'under review' : status.replace(/_/g, ' ')}`, await audit('status_change', 'project', id, { status }));
+  });
+}
