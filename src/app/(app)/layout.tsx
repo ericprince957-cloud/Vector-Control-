@@ -29,6 +29,9 @@ async function loadAlerts(role: string): Promise<ShellAlert[]> {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await requireProfile();
   const alerts = await loadAlerts(profile.role);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const mustChangePassword = user?.user_metadata?.must_change_password === true;
 
   return (
     <AppShell
@@ -36,6 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       fullName={profile.full_name || profile.email}
       email={profile.email}
       alerts={alerts}
+      mustChangePassword={mustChangePassword}
       logout={logout}
     >
       {children}

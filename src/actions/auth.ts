@@ -3,6 +3,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { DEFAULT_STAFF_PASSWORD } from '@/lib/constants';
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -57,9 +58,10 @@ export async function updatePassword(formData: FormData) {
   const password = String(formData.get('password') ?? '');
   const confirm = String(formData.get('confirm') ?? '');
   if (password.length < 8) redirect('/reset-password?error=' + encodeURIComponent('Password must be at least 8 characters'));
+  if (password === DEFAULT_STAFF_PASSWORD) redirect('/reset-password?error=' + encodeURIComponent('Choose a password different from the default one'));
   if (password !== confirm) redirect('/reset-password?error=' + encodeURIComponent('Passwords do not match'));
 
-  const { error } = await supabase.auth.updateUser({ password });
+  const { error } = await supabase.auth.updateUser({ password, data: { must_change_password: false } });
   if (error) redirect('/reset-password?error=' + encodeURIComponent('Could not update password'));
   redirect('/overview');
 }

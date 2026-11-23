@@ -14,3 +14,6 @@ export const TASK_PRIORITIES = ['low','medium','high','urgent'] as const;
 export function label(value: string): string {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+/** Temporary password given to newly invited staff. They are told to change it on first login. */
+export const DEFAULT_STAFF_PASSWORD = '1234567';

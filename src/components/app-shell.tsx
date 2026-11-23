@@ -215,11 +215,12 @@ function UserMenu({ fullName, email, role, logout }: { fullName: string; email: 
   );
 }
 
-export function AppShell({ role, fullName, email, alerts, logout, children }: {
+export function AppShell({ role, fullName, email, alerts, mustChangePassword = false, logout, children }: {
   role: Role;
   fullName: string;
   email: string;
   alerts: ShellAlert[];
+  mustChangePassword?: boolean;
   logout: () => Promise<void>;
   children: ReactNode;
 }) {
@@ -335,6 +336,14 @@ export function AppShell({ role, fullName, email, alerts, logout, children }: {
           </div>
         </header>
 
+        {mustChangePassword ? (
+          <div role="alert" className="sticky top-0 z-30 border-b border-amber-700 bg-amber-950 px-4 py-2.5 text-sm text-amber-100">
+            <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-2">
+              <p><strong className="font-semibold">Change your password as soon as you log in.</strong> Your account is still using the temporary default password.</p>
+              <Link href="/reset-password" className="rounded-[5px] bg-gold px-3 py-1 text-xs font-semibold text-black hover:bg-gold-light">Change password</Link>
+            </div>
+          </div>
+        ) : null}
         <main id="main" className="mx-auto w-full max-w-[1400px] px-3 py-6 sm:px-6">{children}</main>
       </div>
     </ToastProvider>

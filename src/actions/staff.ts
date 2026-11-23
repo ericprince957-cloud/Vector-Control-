@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { requireFounderForAction } from '@/lib/auth';
+import { DEFAULT_STAFF_PASSWORD } from '@/lib/constants';
 import { runAction, audit, blankToNull, withAuditWarning } from './helpers';
 
 /**
@@ -30,6 +31,15 @@ export async function inviteStaff(formData: FormData) {
     if (error) throw new Error(error.message.includes('already') ? 'A user with this email already exists' : 'Invitation failed — check that SUPABASE_SERVICE_ROLE_KEY is configured on the server');
 
     if (data.user) {
+      // Give the account the temporary default password, confirmed and flagged so a
+      // "change your password" banner shows until they set their own.
+      const { error: pwErr } = await admin.auth.admin.updateUserById(data.user.id, {
+        password: DEFAULT_STAFF_PASSWORD,
+        email_confirm: true,
+        user_metadata: { full_name: fullName || email.split('@')[0], must_change_password: true }
+      });
+      if (pwErr) throw new Error('Invitation sent, but the default password could not be set: ' + pwErr.message);
+
       // New accounts default to inactive staff; the founder explicitly assigns
       // the role and activates the account here.
       const { error: upErr } = await admin.from('profiles').upsert({
@@ -42,7 +52,7 @@ export async function inviteStaff(formData: FormData) {
       if (upErr) throw new Error('Invitation sent, but the profile could not be created: ' + upErr.message);
     }
     revalidatePath('/staff');
-    return withAuditWarning(`Invitation sent to ${email} (${role}, inactive until activated)`, await audit('invite', 'staff', data.user?.id, { email, role, by: founder.id }));
+    return withAuditWarning(`Invitation sent to ${email} (${role}). Their temporary password is ${DEFAULT_STAFF_PASSWORD}; they must change it on first login. The account stays inactive until you activate it.`, await audit('invite', 'staff', data.user?.id, { email, role, by: founder.id }));
   });
 }
 

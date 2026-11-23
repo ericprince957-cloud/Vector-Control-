@@ -322,7 +322,7 @@ export function InviteStaffDialog({ action }: { action: Action }) {
   return (
     <FormDialog
       title="Invite staff member"
-      description="They will receive a secure email link to create their own password. Their account stays inactive until you activate it."
+      description="They get an invitation email and can sign in with the temporary password 1234567; a banner tells them to change it immediately. Their account stays inactive until you activate it."
       triggerLabel="Invite staff"
       action={action}
       submitLabel="Send invitation"
