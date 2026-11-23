@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   LayoutDashboard, Users, Send, Handshake, FolderKanban, Wallet, Receipt, Percent,
   XCircle, CheckSquare, BarChart3, UsersRound, Settings, ScrollText, Menu, X, LogOut,
-  PanelLeftClose, PanelLeftOpen, Search, Bell, ChevronDown, ShieldCheck, Sun, Moon
+  PanelLeftClose, PanelLeftOpen, Search, Bell, ChevronDown, ShieldCheck, Sun, Moon, StickyNote, MessagesSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ToastProvider } from './toast';
@@ -24,7 +24,9 @@ const NAV: NavGroup[] = [
     title: 'Workspace',
     items: [
       { href: '/overview', label: 'Overview', icon: LayoutDashboard },
-      { href: '/tasks', label: 'Tasks', icon: CheckSquare }
+      { href: '/tasks', label: 'Tasks', icon: CheckSquare },
+      { href: '/notes', label: 'Notes', icon: StickyNote },
+      { href: '/chat', label: 'Team chat', icon: MessagesSquare }
     ]
   },
   {

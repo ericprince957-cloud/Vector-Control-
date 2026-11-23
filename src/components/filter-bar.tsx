@@ -11,15 +11,18 @@ export type FilterDef =
  * GET-form filter bar. State lives in the URL, so filtered views are
  * shareable, work without client JavaScript, and stay server-rendered.
  */
-export function FilterBar({ basePath, filters, values }: {
+export function FilterBar({ basePath, filters, values, hidden }: {
   basePath: string;
   filters: FilterDef[];
   values: Record<string, string | undefined>;
+  /** Extra query params kept when the form is submitted (e.g. the current tab). */
+  hidden?: Record<string, string | undefined>;
 }) {
   const active = filters.some((f) => values[f.name]);
   return (
     <Card className="mb-4 p-3">
       <form method="get" action={basePath} className="flex flex-wrap items-end gap-3">
+        {Object.entries(hidden ?? {}).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
         {filters.map((f) => {
           if (f.kind === 'search') {
             return (
