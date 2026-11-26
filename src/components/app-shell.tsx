@@ -23,11 +23,11 @@ const REALTY_NAV: NavGroup[] = [
   {
     title: 'Realty workspace',
     items: [
-      { href: '/realty/overview', label: 'Overview', icon: LayoutDashboard },
-      { href: '/realty/properties', label: 'Properties', icon: Building },
-      { href: '/realty/contacts', label: 'Contacts', icon: Users },
-      { href: '/realty/enquiries', label: 'Enquiries', icon: Inbox },
-      { href: '/realty/partnerships', label: 'Partnerships', icon: Handshake },
+      { href: '/realty/overview', label: 'Overview', icon: LayoutDashboard, roles: ['founder'] },
+      { href: '/realty/properties', label: 'Properties', icon: Building, roles: ['founder'] },
+      { href: '/realty/contacts', label: 'Contacts', icon: Users, roles: ['founder'] },
+      { href: '/realty/enquiries', label: 'Enquiries', icon: Inbox, roles: ['founder'] },
+      { href: '/realty/partnerships', label: 'Partnerships', icon: Handshake, roles: ['founder'] },
       { href: '/realty/deals', label: 'Deals', icon: Briefcase }
     ]
   }
@@ -81,7 +81,7 @@ function visible(item: NavItem, role: Role) {
 
 function Brand({ collapsed, company = 'Vector Codes' }: { collapsed?: boolean; company?: string }) {
   return (
-    <Link href="/overview" className="flex items-center gap-3" aria-label="Vector Control home">
+    <Link href={company === 'Vectors Realty' ? '/realty/overview' : '/overview'} className="flex items-center gap-3" aria-label="Vector Control home">
       <Image src="/logo.png" alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-full" priority />
       {!collapsed ? (
         <div className="min-w-0 leading-tight">
