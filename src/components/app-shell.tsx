@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   LayoutDashboard, Users, Send, Handshake, FolderKanban, Wallet, Receipt, Percent,
   XCircle, CheckSquare, BarChart3, UsersRound, Settings, ScrollText, Menu, X, LogOut,
-  PanelLeftClose, PanelLeftOpen, Search, Bell, ChevronDown, ShieldCheck, Sun, Moon, StickyNote, MessagesSquare
+  PanelLeftClose, PanelLeftOpen, Search, Bell, ChevronDown, ShieldCheck, Sun, Moon, StickyNote, MessagesSquare, Building2, Home, Building, Contact, Inbox, Handshake as HandshakeIcon, BriefcaseBusiness
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ToastProvider } from './toast';
@@ -18,6 +18,20 @@ type Role = 'founder' | 'admin' | 'staff';
 
 type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; roles?: Role[] };
 type NavGroup = { title: string; items: NavItem[] };
+
+const REALTY_NAV: NavGroup[] = [
+  {
+    title: 'Realty workspace',
+    items: [
+      { href: '/realty/overview', label: 'Overview', icon: LayoutDashboard },
+      { href: '/realty/properties', label: 'Properties', icon: Building },
+      { href: '/realty/contacts', label: 'Contacts', icon: Contact },
+      { href: '/realty/enquiries', label: 'Enquiries', icon: Inbox },
+      { href: '/realty/partnerships', label: 'Partnerships', icon: HandshakeIcon },
+      { href: '/realty/deals', label: 'Deals', icon: BriefcaseBusiness }
+    ]
+  }
+];
 
 const NAV: NavGroup[] = [
   {
@@ -65,21 +79,21 @@ function visible(item: NavItem, role: Role) {
   return !item.roles || item.roles.includes(role);
 }
 
-function Brand({ collapsed }: { collapsed?: boolean }) {
+function Brand({ collapsed, company = 'Vector Codes' }: { collapsed?: boolean; company?: string }) {
   return (
     <Link href="/overview" className="flex items-center gap-3" aria-label="Vector Control home">
       <Image src="/logo.png" alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-full" priority />
       {!collapsed ? (
         <div className="min-w-0 leading-tight">
           <p className="truncate text-sm font-semibold tracking-wide">Vector Control</p>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-muted">Vector Codes</p>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted">{company}</p>
         </div>
       ) : null}
     </Link>
   );
 }
 
-function NavLinks({ role, collapsed, onNavigate }: { role: Role; collapsed?: boolean; onNavigate?: () => void }) {
+function NavLinks({ role, collapsed, onNavigate, isRealty = false }: { role: Role; collapsed?: boolean; onNavigate?: () => void; isRealty?: boolean }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Primary" className="vc-scroll flex-1 overflow-y-auto px-2 pb-4">
@@ -278,9 +292,9 @@ export function AppShell({ role, fullName, email, alerts, mustChangePassword = f
         )}
       >
         <div className={cn('flex h-14 shrink-0 items-center border-b border-line', collapsed ? 'justify-center' : 'px-4')}>
-          <Brand collapsed={collapsed} />
+          <Brand collapsed={collapsed} company={isRealty ? 'Vectors Realty' : 'Vector Codes'} />
         </div>
-        <NavLinks role={role} collapsed={collapsed} />
+        <NavLinks role={role} collapsed={collapsed} isRealty={isRealty} />
         <button
           type="button"
           onClick={toggle}
@@ -297,12 +311,12 @@ export function AppShell({ role, fullName, email, alerts, mustChangePassword = f
           <div className="absolute inset-0 bg-black/75" onClick={() => setDrawer(false)} aria-hidden />
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-line bg-surface">
             <div className="flex h-14 items-center justify-between border-b border-line px-4">
-              <Brand />
+              <Brand company={isRealty ? 'Vectors Realty' : 'Vector Codes'} />
               <button type="button" aria-label="Close menu" onClick={() => setDrawer(false)} className="flex h-10 w-10 items-center justify-center text-muted">
                 <X size={20} />
               </button>
             </div>
-            <NavLinks role={role} onNavigate={() => setDrawer(false)} />
+            <NavLinks role={role} isRealty={isRealty} onNavigate={() => setDrawer(false)} />
           </div>
         </div>
       ) : null}
@@ -329,6 +343,21 @@ export function AppShell({ role, fullName, email, alerts, mustChangePassword = f
             </div>
           </form>
 
+          {role === 'founder' ? (
+            <label className="hidden items-center gap-2 rounded-[5px] border border-line bg-surface px-2.5 sm:flex">
+              <Building2 size={15} className="text-gold" aria-hidden />
+              <span className="sr-only">Switch company</span>
+              <select
+                aria-label="Switch company"
+                value={isRealty ? 'realty' : 'codes'}
+                onChange={(e) => router.push(e.target.value === 'realty' ? '/realty/overview' : '/overview')}
+                className="h-9 max-w-40 bg-transparent text-xs font-medium text-text outline-none"
+              >
+                <option value="codes">Vector Codes</option>
+                <option value="realty">Vectors Realty</option>
+              </select>
+            </label>
+          ) : null}
           <div className="ml-auto flex items-center gap-1">
             <button type="button" onClick={toggleTheme} aria-label={"Switch to " + (theme === "dark" ? "light" : "dark") + " mode"} title={"Switch to " + (theme === "dark" ? "light" : "dark") + " mode"} className="flex h-10 w-10 items-center justify-center rounded-[5px] text-muted hover:bg-surface-2 hover:text-text">
               {theme === "dark" ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
