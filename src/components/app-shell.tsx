@@ -344,8 +344,8 @@ export function AppShell({ role, fullName, email, alerts, mustChangePassword = f
           </form>
 
           {role === 'founder' ? (
-            <label className="hidden items-center gap-2 rounded-[5px] border border-line bg-surface px-2.5 sm:flex">
-              <Building2 size={15} className="text-gold" aria-hidden />
+            <label className="flex shrink-0 items-center gap-1 rounded-[5px] border border-line bg-surface px-1.5 sm:gap-2 sm:px-2.5">
+              <Building2 size={14} className="hidden text-gold sm:block" aria-hidden />
               <span className="sr-only">Switch company</span>
               <select
                 aria-label="Switch company"
