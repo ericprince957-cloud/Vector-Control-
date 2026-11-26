@@ -329,7 +329,7 @@ export function AppShell({ role, fullName, email, alerts, mustChangePassword = f
           <button type="button" aria-label="Open menu" onClick={() => setDrawer(true)} className="flex h-10 w-10 items-center justify-center rounded-[5px] text-muted hover:bg-surface-2 lg:hidden">
             <Menu size={20} />
           </button>
-          <div className="lg:hidden"><Brand collapsed /></div>
+          <div className="lg:hidden"><Brand collapsed company={isRealty ? 'Vectors Realty' : 'Vector Codes'} /></div>
 
           <form onSubmit={search} role="search" className="ml-1 flex-1 sm:max-w-md">
             <label htmlFor="global-search" className="sr-only">Search prospects</label>
