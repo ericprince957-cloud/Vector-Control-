@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   LayoutDashboard, Users, Send, Handshake, FolderKanban, Wallet, Receipt, Percent,
   XCircle, CheckSquare, BarChart3, UsersRound, Settings, ScrollText, Menu, X, LogOut,
-  PanelLeftClose, PanelLeftOpen, Search, Bell, ChevronDown, ShieldCheck, Sun, Moon, StickyNote, MessagesSquare, Building2, Home, Building, Contact, Inbox, Handshake as HandshakeIcon, BriefcaseBusiness
+  PanelLeftClose, PanelLeftOpen, Search, Bell, ChevronDown, ShieldCheck, Sun, Moon, StickyNote, MessagesSquare, Building2, Building, Inbox, Briefcase
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ToastProvider } from './toast';
@@ -25,10 +25,10 @@ const REALTY_NAV: NavGroup[] = [
     items: [
       { href: '/realty/overview', label: 'Overview', icon: LayoutDashboard },
       { href: '/realty/properties', label: 'Properties', icon: Building },
-      { href: '/realty/contacts', label: 'Contacts', icon: Contact },
+      { href: '/realty/contacts', label: 'Contacts', icon: Users },
       { href: '/realty/enquiries', label: 'Enquiries', icon: Inbox },
-      { href: '/realty/partnerships', label: 'Partnerships', icon: HandshakeIcon },
-      { href: '/realty/deals', label: 'Deals', icon: BriefcaseBusiness }
+      { href: '/realty/partnerships', label: 'Partnerships', icon: Handshake },
+      { href: '/realty/deals', label: 'Deals', icon: Briefcase }
     ]
   }
 ];
@@ -95,9 +95,10 @@ function Brand({ collapsed, company = 'Vector Codes' }: { collapsed?: boolean; c
 
 function NavLinks({ role, collapsed, onNavigate, isRealty = false }: { role: Role; collapsed?: boolean; onNavigate?: () => void; isRealty?: boolean }) {
   const pathname = usePathname();
+  const groups = isRealty ? REALTY_NAV : NAV;
   return (
     <nav aria-label="Primary" className="vc-scroll flex-1 overflow-y-auto px-2 pb-4">
-      {NAV.map((group) => {
+      {groups.map((group) => {
         const items = group.items.filter((i) => visible(i, role));
         if (!items.length) return null;
         return (
