@@ -93,6 +93,37 @@ function Brand({ collapsed, company = 'Vector Codes' }: { collapsed?: boolean; c
   );
 }
 
+function CompanySwitcher({ isRealty, compact = false }: { isRealty: boolean; compact?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useOutsideClose(ref, () => setOpen(false), open);
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button type="button" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen((value) => !value)}
+        className="flex h-8 items-center gap-1.5 rounded-[5px] border border-line bg-surface-2 px-2 text-[11px] font-medium text-muted transition-colors hover:border-gold/50 hover:text-gold">
+        <Building2 size={13} aria-hidden />
+        {!compact ? <span>Switch</span> : <span className="sr-only">Switch company</span>}
+        <ChevronDown size={12} aria-hidden />
+      </button>
+      {open ? (
+        <div role="menu" className="absolute left-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-[6px] border border-line-strong bg-surface py-1 shadow-xl shadow-black/50">
+          <p className="px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">Switch company</p>
+          <Link href="/overview" role="menuitem" onClick={() => setOpen(false)}
+            className={cn("flex items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:bg-surface-2", !isRealty ? "text-gold" : "text-text")}>
+            <Building2 size={14} aria-hidden /> Vector Codes
+            {!isRealty ? <span className="ml-auto text-[10px]">Current</span> : null}
+          </Link>
+          <Link href="/realty/overview" role="menuitem" onClick={() => setOpen(false)}
+            className={cn("flex items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:bg-surface-2", isRealty ? "text-gold" : "text-text")}>
+            <Building size={14} aria-hidden /> Vectors Realty
+            {isRealty ? <span className="ml-auto text-[10px]">Current</span> : null}
+          </Link>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function NavLinks({ role, collapsed, onNavigate, isRealty = false }: { role: Role; collapsed?: boolean; onNavigate?: () => void; isRealty?: boolean }) {
   const pathname = usePathname();
   const groups = isRealty ? REALTY_NAV : NAV;
@@ -293,8 +324,9 @@ export function AppShell({ role, fullName, email, alerts, mustChangePassword = f
           collapsed ? 'w-[68px]' : 'w-60'
         )}
       >
-        <div className={cn('flex h-14 shrink-0 items-center border-b border-line', collapsed ? 'justify-center' : 'px-4')}>
+        <div className={cn('flex h-14 shrink-0 items-center border-b border-line', collapsed ? 'justify-center' : 'justify-between gap-2 px-4')}>
           <Brand collapsed={collapsed} company={isRealty ? 'Vectors Realty' : 'Vector Codes'} />
+          {role === 'founder' && !collapsed ? <CompanySwitcher isRealty={isRealty} /> : null}
         </div>
         <NavLinks role={role} collapsed={collapsed} isRealty={isRealty} />
         <button
@@ -312,11 +344,14 @@ export function AppShell({ role, fullName, email, alerts, mustChangePassword = f
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/75" onClick={() => setDrawer(false)} aria-hidden />
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-line bg-surface">
-            <div className="flex h-14 items-center justify-between border-b border-line px-4">
+            <div className="flex h-14 items-center justify-between gap-2 border-b border-line px-4">
               <Brand company={isRealty ? 'Vectors Realty' : 'Vector Codes'} />
-              <button type="button" aria-label="Close menu" onClick={() => setDrawer(false)} className="flex h-10 w-10 items-center justify-center text-muted">
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-1">
+                {role === 'founder' ? <CompanySwitcher isRealty={isRealty} /> : null}
+                <button type="button" aria-label="Close menu" onClick={() => setDrawer(false)} className="flex h-10 w-10 items-center justify-center text-muted">
+                  <X size={20} />
+                </button>
+              </div>
             </div>
             <NavLinks role={role} isRealty={isRealty} onNavigate={() => setDrawer(false)} />
           </div>
@@ -329,7 +364,10 @@ export function AppShell({ role, fullName, email, alerts, mustChangePassword = f
           <button type="button" aria-label="Open menu" onClick={() => setDrawer(true)} className="flex h-10 w-10 items-center justify-center rounded-[5px] text-muted hover:bg-surface-2 lg:hidden">
             <Menu size={20} />
           </button>
-          <div className="lg:hidden"><Brand collapsed company={isRealty ? 'Vectors Realty' : 'Vector Codes'} /></div>
+          <div className="flex shrink-0 items-center gap-2 lg:hidden">
+            <Brand collapsed company={isRealty ? 'Vectors Realty' : 'Vector Codes'} />
+            {role === 'founder' ? <CompanySwitcher isRealty={isRealty} compact /> : null}
+          </div>
 
           <form onSubmit={search} role="search" className="ml-1 flex-1 sm:max-w-md">
             <label htmlFor="global-search" className="sr-only">Search prospects</label>
@@ -345,21 +383,6 @@ export function AppShell({ role, fullName, email, alerts, mustChangePassword = f
             </div>
           </form>
 
-          {role === 'founder' ? (
-            <label className="flex shrink-0 items-center gap-1 rounded-[5px] border border-line bg-surface px-1.5 sm:gap-2 sm:px-2.5">
-              <Building2 size={14} className="hidden text-gold sm:block" aria-hidden />
-              <span className="sr-only">Switch company</span>
-              <select
-                aria-label="Switch company"
-                value={isRealty ? 'realty' : 'codes'}
-                onChange={(e) => router.push(e.target.value === 'realty' ? '/realty/overview' : '/overview')}
-                className="h-9 max-w-40 bg-transparent text-xs font-medium text-text outline-none"
-              >
-                <option value="codes">Vector Codes</option>
-                <option value="realty">Vectors Realty</option>
-              </select>
-            </label>
-          ) : null}
           <div className="ml-auto flex items-center gap-1">
             <button type="button" onClick={toggleTheme} aria-label={"Switch to " + (theme === "dark" ? "light" : "dark") + " mode"} title={"Switch to " + (theme === "dark" ? "light" : "dark") + " mode"} className="flex h-10 w-10 items-center justify-center rounded-[5px] text-muted hover:bg-surface-2 hover:text-text">
               {theme === "dark" ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
