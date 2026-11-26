@@ -1,4 +1,23 @@
 -- Vectors Realty workspace. Kept in dedicated tables so Vector Codes records remain untouched.
+create table if not exists public.realty_contacts (
+  id uuid primary key default gen_random_uuid(),
+  full_name text not null check (length(trim(full_name)) > 0),
+  contact_type text not null default 'buyer' check (contact_type in ('owner','buyer','investor','tenant','developer','partner','professional')),
+  phone text not null default '',
+  email text not null default '',
+  location text not null default '',
+  notes text not null default '',
+  status text not null default 'active' check (status in ('active','inactive')),
+  created_by uuid not null default auth.uid() references public.profiles(id) on delete restrict,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.realty_properties
+  add constraint realty_properties_owner_contact_fkey
+  foreign key (owner_contact_id) references public.realty_contacts(id) on delete set null;
+
+
 create table if not exists public.realty_properties (
   id uuid primary key default gen_random_uuid(),
   title text not null check (length(trim(title)) > 0),
@@ -20,23 +39,6 @@ create table if not exists public.realty_properties (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.realty_contacts (
-  id uuid primary key default gen_random_uuid(),
-  full_name text not null check (length(trim(full_name)) > 0),
-  contact_type text not null default 'buyer' check (contact_type in ('owner','buyer','investor','tenant','developer','partner','professional')),
-  phone text not null default '',
-  email text not null default '',
-  location text not null default '',
-  notes text not null default '',
-  status text not null default 'active' check (status in ('active','inactive')),
-  created_by uuid not null default auth.uid() references public.profiles(id) on delete restrict,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-alter table public.realty_properties
-  add constraint realty_properties_owner_contact_fkey
-  foreign key (owner_contact_id) references public.realty_contacts(id) on delete set null;
 
 create table if not exists public.realty_enquiries (
   id uuid primary key default gen_random_uuid(),
@@ -51,6 +53,7 @@ create table if not exists public.realty_enquiries (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
 
 create table if not exists public.realty_partnerships (
   id uuid primary key default gen_random_uuid(),
@@ -67,6 +70,7 @@ create table if not exists public.realty_partnerships (
   updated_at timestamptz not null default now()
 );
 
+
 create table if not exists public.realty_deals (
   id uuid primary key default gen_random_uuid(),
   title text not null check (length(trim(title)) > 0),
@@ -82,6 +86,9 @@ create table if not exists public.realty_deals (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+
+alter table public.realty_properties add constraint realty_properties_owner_contact_fkey foreign key (owner_contact_id) references public.realty_contacts(id) on delete set null;
 
 create index if not exists realty_properties_status_idx on public.realty_properties(status);
 create index if not exists realty_properties_location_idx on public.realty_properties(state, city);
