@@ -13,9 +13,6 @@ create table if not exists public.realty_contacts (
   updated_at timestamptz not null default now()
 );
 
-alter table public.realty_properties
-  add constraint realty_properties_owner_contact_fkey
-  foreign key (owner_contact_id) references public.realty_contacts(id) on delete set null;
 
 
 create table if not exists public.realty_properties (
