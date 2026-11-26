@@ -247,6 +247,7 @@ export function AppShell({ role, fullName, email, alerts, mustChangePassword = f
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const router = useRouter();
   const pathname = usePathname();
+  const isRealty = pathname.startsWith('/realty');
 
   // Restore sidebar preference (per browser) after hydration.
   useEffect(() => {
