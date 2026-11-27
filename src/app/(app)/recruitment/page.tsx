@@ -74,11 +74,11 @@ export default async function RecruitmentPage() {
                       <option value="under_review">Under review</option><option value="shortlisted">Shortlist</option><option value="interview">Interview</option><option value="rejected">Reject</option>
                     </select>
                     <SubmitButton variant="subtle" size="sm" pendingLabel="Saving…">Update</SubmitButton>
-                  </form>
-                  <form action={approveApplication}>
+                  </ActionForm>
+                  <ActionForm action={approveApplication}>
                     <input type="hidden" name="id" value={a.id} />
                     <SubmitButton size="sm" pendingLabel="Sending invite…">Approve &amp; send invite</SubmitButton>
-                  </form>
+                  </ActionForm>
                 </div>
               ) : null}
             </article>)}
