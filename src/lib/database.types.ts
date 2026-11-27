@@ -565,6 +565,84 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_applications: {
+        Row: {
+          id: string
+          full_name: string
+          email: string
+          phone: string
+          whatsapp: string | null
+          location: string | null
+          position: string
+          employment_type: string
+          experience_level: string | null
+          years_experience: number | null
+          skills: string[]
+          portfolio_url: string | null
+          linkedin_url: string | null
+          github_url: string | null
+          cv_url: string | null
+          cover_letter: string | null
+          availability: string | null
+          status: string
+          admin_notes: string | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          full_name: string
+          email: string
+          phone: string
+          whatsapp?: string | null
+          location?: string | null
+          position: string
+          employment_type?: string
+          experience_level?: string | null
+          years_experience?: number | null
+          skills?: string[]
+          portfolio_url?: string | null
+          linkedin_url?: string | null
+          github_url?: string | null
+          cv_url?: string | null
+          cover_letter?: string | null
+          availability?: string | null
+          status?: string
+          admin_notes?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string
+          phone?: string
+          whatsapp?: string | null
+          location?: string | null
+          position?: string
+          employment_type?: string
+          experience_level?: string | null
+          years_experience?: number | null
+          skills?: string[]
+          portfolio_url?: string | null
+          linkedin_url?: string | null
+          github_url?: string | null
+          cv_url?: string | null
+          cover_letter?: string | null
+          availability?: string | null
+          status?: string
+          admin_notes?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           assigned_to: string | null
