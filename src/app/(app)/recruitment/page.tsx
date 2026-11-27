@@ -5,6 +5,7 @@ import { formatDate } from '@/lib/utils';
 import { Badge, Card, CardHeader, EmptyState } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
 import { SubmitButton } from '@/components/submit-button';
+import { ActionForm } from '@/components/action-form';
 import { approveApplication, updateApplicationStatus } from '@/actions/applications';
 
 export const metadata: Metadata = { title: 'Recruitment', description: 'Review Sales Representative applications.' };
@@ -66,7 +67,7 @@ export default async function RecruitmentPage() {
               {a.admin_notes ? <p className="mt-2 text-xs text-muted"><strong className="text-text">Internal note:</strong> {a.admin_notes}</p> : null}
               {a.status !== 'approved' && a.status !== 'rejected' && a.status !== 'withdrawn' ? (
                 <div className="mt-5 grid gap-3 border-t border-line pt-4 lg:grid-cols-[1fr_auto]">
-                  <form action={updateApplicationStatus} className="flex flex-wrap items-center gap-2">
+                  <ActionForm action={updateApplicationStatus} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="id" value={a.id} />
                     <input name="admin_notes" defaultValue={a.admin_notes || ''} placeholder="Internal review note (optional)" className="min-h-10 min-w-0 flex-1 rounded-[5px] border border-line-strong bg-surface px-3 text-xs" />
                     <select name="status" defaultValue={a.status === 'pending' ? 'under_review' : a.status} className="min-h-10 rounded-[5px] border border-line-strong bg-surface px-2 text-xs">
