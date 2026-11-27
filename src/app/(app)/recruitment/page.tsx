@@ -40,7 +40,7 @@ export default async function RecruitmentPage() {
       </section>
       <Card>
         <CardHeader title="Applications" subtitle="Newest applications appear first. Only the founder can review and approve applicants." />
-        {!applications.length ? <EmptyState title="No applications yet" description="Share the public careers page to start receiving applications." /> : (
+        {!applications.length ? <EmptyState title="No applications yet" hint="Share the public careers page to start receiving applications." /> : (
           <div className="divide-y divide-line">
             {applications.map((a) => <article key={a.id} className="p-4 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
