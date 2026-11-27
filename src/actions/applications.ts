@@ -123,8 +123,8 @@ export async function approveApplication(formData: FormData) {
     if (lookupError || !application) throw new Error('Could not find this application');
     if (application.status === 'approved') throw new Error('This application has already been approved');
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    if (!appUrl) throw new Error('Server configuration is missing NEXT_PUBLIC_APP_URL');
+    const appUrl = process.env.STAFF_PORTAL_URL;
+    if (!appUrl) throw new Error('Server configuration is missing STAFF_PORTAL_URL');
     const redirectTo = new URL('/auth/callback?next=%2Fset-password', appUrl).toString();
 
     const { data: invitation, error: inviteError } = await admin.auth.admin.inviteUserByEmail(application.email, {
