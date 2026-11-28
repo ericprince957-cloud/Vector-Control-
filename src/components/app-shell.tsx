@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  LayoutDashboard, Users, Send, Handshake, FolderKanban, Wallet, Receipt, Percent,
+  LayoutDashboard, Users, Send, Handshake, FolderKanban, Wallet, Receipt, Percent, Landmark,
   XCircle, CheckSquare, BarChart3, UsersRound, Settings, ScrollText, Menu, X, LogOut,
   PanelLeftClose, PanelLeftOpen, Search, Bell, ChevronDown, ShieldCheck, Sun, Moon, StickyNote, MessagesSquare, Building2, Building, Inbox, Briefcase, UserPlus
 } from 'lucide-react';
@@ -60,6 +60,7 @@ const NAV: NavGroup[] = [
     title: 'Finance',
     items: [
       { href: '/finance', label: 'Payments', icon: Wallet, roles: ['founder', 'admin'] },
+      { href: '/banking', label: 'Banking', icon: Landmark, roles: ['founder', 'admin'] },
       { href: '/expenses', label: 'Expenses', icon: Receipt, roles: ['founder', 'admin'] },
       { href: '/commissions', label: 'Commissions', icon: Percent },
       { href: '/reports', label: 'Reports', icon: BarChart3, roles: ['founder', 'admin'] }
